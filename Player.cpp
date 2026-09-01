@@ -12,6 +12,8 @@
 #include "box.h"
 #include "audio.h"
 #include "shadow.h"
+#include "Score.h"
+#include <cstdio>
 
 namespace
 {
@@ -19,11 +21,40 @@ namespace
 	// whether two [COLLIDE] lines happened in the SAME frame or several
 	// frames apart, which the old log (no frame number) couldn't tell you.
 	unsigned s_DebugFrame = 0;
+
+	// DEBUG: writes every log line to a file (in addition to
+	// OutputDebugStringA) so it survives independent of when the VS Output
+	// window gets copied -- that window's content is only good until the
+	// next F5, so a video from one run and a log copied after starting the
+	// next run don't actually match. This file is truncated fresh at the
+	// start of each run (Player::Init) and every line is flushed
+	// immediately, so whatever's in it after closing the game is exactly
+	// that run's log, however it ends (including a crash). It lands next to
+	// the other relative paths this project already uses (model\\...,
+	// shader\\...), i.e. wherever the .exe's working directory is -- same
+	// place, every run.
+	FILE* s_DebugLogFile = nullptr;
+
+	void DebugLog(const char* text)
+	{
+		OutputDebugStringA(text);
+		if (s_DebugLogFile)
+		{
+			fputs(text, s_DebugLogFile);
+			fflush(s_DebugLogFile);
+		}
+	}
 }
 
 void Player::Init()
 {
 	m_Layer = 8;
+
+	// DEBUG: fresh log file every run -- see DebugLog() above.
+	if (!s_DebugLogFile)
+	{
+		fopen_s(&s_DebugLogFile, "debug_log.txt", "w");
+	}
 
 	m_Position = { 0, 0, 0 }; // start position
 
@@ -51,6 +82,20 @@ void Player::Uninit()
 void Player::Update()
 {
 	s_DebugFrame++;
+
+	// --- DEBUG: show the live frame counter where the score HUD normally
+	// goes (top-left "0 0 0 0"), so a screen recording can be lined up
+	// exactly against the Output-window [COLLIDE] log by just reading the
+	// number on screen. Score isn't used for anything yet, so this is safe
+	// to leave in until the wall bug is confirmed fixed -- just delete this
+	// block (and the SetValue call it needs in Score.h) afterward.
+	{
+		Score* score = Manager::GetGameObject<Score>();
+		if (score)
+		{
+			score->SetValue(s_DebugFrame % 10000);
+		}
+	}
 
 	// fixed-step dt (fine for a school-contest build; swap for a real delta time later)
 	float dt = 1.0f / 60.0f;
@@ -213,24 +258,28 @@ void Player::Update()
 
 	// box collision (also used for the map's walls)
 	//
-	// PREVIOUS approach resolved against *every* overlapping box within the
-	// same pass. At a corner or doorway where two wall boxes meet, pushing
-	// the player out of the first box could shove them into the second
-	// box's (skin-expanded) AABB even though the two walls themselves don't
-	// actually overlap -- and resolving that second box immediately, in the
-	// same pass, used a penetration depth computed from that artificial
-	// overlap. That could produce an oversized push, in a single frame,
-	// large enough to fling the player out past the wall and into the open
-	// field beyond it -- which is exactly the "walls disappear" symptom
-	// (the player is suddenly just standing somewhere with no walls nearby,
-	// not looking at a rendering glitch).
+	// Each pass, find the box the player is *least* deeply overlapping (the
+	// shallowest penetration = the most recently-touched, most legitimate
+	// contact) and resolve only that one, then move to the next pass and
+	// re-measure from scratch. This keeps every single push bounded by one
+	// real box's geometry instead of letting pushes against several boxes
+	// chain off of each other's side effects within the same pass (which
+	// used to be able to fling the player a large distance in one frame).
 	//
-	// NEW approach: each pass, find the box the player is *least* deeply
-	// overlapping (the shallowest penetration = the most recently-touched,
-	// most legitimate contact) and resolve only that one, then move to the
-	// next pass and re-measure from scratch. This keeps every single push
-	// bounded by one real box's geometry instead of letting pushes chain
-	// off of each other's side effects within the same pass.
+	// NO top/"stand on top" case anymore: these boxes are hospital walls,
+	// not platforms. Previously, a box's top surface (Y = boxPos.y +
+	// boxScale.y) counted as a landing spot, same as the floor. jumpImpulse
+	// (25) with gravity (60) gives a jump apex of ~5.2 units -- comfortably
+	// higher than a wall's 3-unit height -- so jumping anywhere near a wall
+	// could land the player ON TOP of it, which then got treated as solid
+	// ground (m_Grounded = true), letting them walk around up there. From
+	// up there, looking out over the tops of every 3-unit wall in the maze
+	// at the open field beyond looks exactly like "all the walls just
+	// vanished" -- no rendering bug or actual teleport required. Debug logs
+	// confirmed this: long runs of pick=T with playerPos.y sitting at
+	// exactly boxPos.y+boxScale.y while moving smoothly in X/Z, i.e.
+	// walking along a wall's top edge. Walls now only ever push sideways
+	// (X/Z) -- there's nothing to climb.
 	auto boxes = Manager::GetGameObjects<Box>();
 	const int kCollisionPasses = 4;
 	Vector3 prePush = m_Position;
@@ -240,7 +289,7 @@ void Player::Update()
 		Box* bestBox = nullptr;
 		Vector3 bestBoxPos{}, bestBoxScale{};
 		float bestPen = 0.0f;
-		char bestAxis = 0; // 'T' top, 'X', 'Z'
+		char bestAxis = 0; // 'X' or 'Z' -- no 'T' (top) case, see above
 
 		for (auto box : boxes)
 		{
@@ -257,11 +306,10 @@ void Player::Update()
 				boxPosition.y - boxScale.y - skin < m_Position.y && m_Position.y < boxPosition.y + boxScale.y + skin &&
 				boxPosition.z - boxScale.z - skin < m_Position.z && m_Position.z < boxPosition.z + boxScale.z + skin)
 			{
-				float penTop = (boxPosition.y + boxScale.y) - m_Position.y;
 				float penX = boxScale.x - std::fabs(m_Position.x - boxPosition.x);
 				float penZ = boxScale.z - std::fabs(m_Position.z - boxPosition.z);
 
-				float minPen = std::min(penTop, std::min(penX, penZ));
+				float minPen = std::min(penX, penZ);
 
 				if (bestBox == nullptr || minPen < bestPen)
 				{
@@ -269,7 +317,7 @@ void Player::Update()
 					bestBoxPos = boxPosition;
 					bestBoxScale = boxScale;
 					bestPen = minPen;
-					bestAxis = (minPen == penTop) ? 'T' : (minPen == penX) ? 'X' : 'Z';
+					bestAxis = (minPen == penX) ? 'X' : 'Z';
 				}
 			}
 		}
@@ -296,16 +344,10 @@ void Player::Update()
 				bestBoxScale.x, bestBoxScale.y, bestBoxScale.z,
 				m_Position.x, m_Position.y, m_Position.z,
 				bestPen, bestAxis);
-			OutputDebugStringA(buf);
+			DebugLog(buf);
 		}
 
-		if (bestAxis == 'T')
-		{
-			m_Position.y = bestBoxPos.y + bestBoxScale.y;
-			if (m_Velocity.y < 0.0f) m_Velocity.y = 0.0f;
-			m_Grounded = true;
-		}
-		else if (bestAxis == 'X')
+		if (bestAxis == 'X')
 		{
 			if (m_Position.x < bestBoxPos.x)
 				m_Position.x = bestBoxPos.x - bestBoxScale.x - pushClearance;
@@ -339,7 +381,7 @@ void Player::Update()
 			sprintf_s(buf,
 				"[SUSPICIOUS PUSH] frame=%u collision moved %.2f units in one frame: (%.2f,%.2f,%.2f) -> (%.2f,%.2f,%.2f) -- reverted\n",
 				s_DebugFrame, pushDist, prePush.x, prePush.y, prePush.z, m_Position.x, m_Position.y, m_Position.z);
-			OutputDebugStringA(buf);
+			DebugLog(buf);
 
 			m_Position = prePush;
 			m_Velocity.x = 0.0f;
@@ -364,13 +406,13 @@ void Player::Update()
 				"[JUMP DETECTED] frame=%u moved %.2f units in one frame: (%.2f,%.2f,%.2f) -> (%.2f,%.2f,%.2f)\n",
 				s_DebugFrame, debugJump, debugPosBeforeMove.x, debugPosBeforeMove.y, debugPosBeforeMove.z,
 				m_Position.x, m_Position.y, m_Position.z);
-			OutputDebugStringA(buf);
+			DebugLog(buf);
 		}
 	}
 
 	if (Input::GetKeyTrigger('F')) // fire (keep or remove later depending on the game design)
 	{
-		OutputDebugStringA("Bullet Create\n");
+		DebugLog("Bullet Create\n");
 		Bullet* bullet = Manager::AddGameObject<Bullet>();
 		bullet->SetPosition(m_Position);
 		bullet->SetVelocity(GetForward() * 25.0f);
@@ -385,6 +427,21 @@ void Player::Update()
 	Vector3 shadowPos = m_Position;
 	shadowPos.y = 0.05f;
 	m_Shadow->SetPosition(shadowPos);
+
+	// --- DEBUG: one line per frame with the final position, regardless of
+	// whether any collision happened. The [COLLIDE] lines only fire when
+	// touching a box, so a jump that happens while NOT touching anything
+	// (e.g. mid-air, or in open floor) would otherwise leave zero trace.
+	// This closes that gap -- with the on-screen frame counter, any jump
+	// shows up as a big gap between consecutive lines' position, at an
+	// exact, readable frame number. Cheap to leave running for our short
+	// test sessions; delete once the bug's confirmed fixed.
+	{
+		char buf[128];
+		sprintf_s(buf, "[POS] frame=%u pos=(%.2f,%.2f,%.2f)\n",
+			s_DebugFrame, m_Position.x, m_Position.y, m_Position.z);
+		DebugLog(buf);
+	}
 
 	GameObject::Update();
 }

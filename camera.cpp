@@ -54,8 +54,21 @@ void Camera::Update()
 void Camera::Draw()
 {
 	// build the projection matrix
+	//
+	// Far plane shortened from 1000 to 70 as a stopgap: right now there's no
+	// ceiling, no skydome, and Field (the floor) stretches out to +-30 with
+	// nothing on it, so standing in any room/corridor and NOT facing a wall
+	// shows nothing but flat grass all the way to the horizon -- which reads
+	// as "everything just disappeared" even though nothing's actually wrong.
+	// 70 comfortably covers the whole built-out maze (it fits inside roughly
+	// +-24 x +-22) with some margin, but cuts the open field off well short
+	// of its real edge, so there's no more infinite-looking void. This is a
+	// stand-in, not the real fix -- the real fix is the skydome + some kind
+	// of fog/darkness (spec item 2: "background (skydome, procedural
+	// terrain, etc.) is displayed"), which is its own task. Once that's in,
+	// this can go back up (or get replaced by fog's own distance falloff).
 	XMMATRIX projection = XMMatrixPerspectiveFovLH
-	(1, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 1000.0f);
+	(1, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 70.0f);
 
 	Renderer::SetProjectionMatrix(projection);
 
