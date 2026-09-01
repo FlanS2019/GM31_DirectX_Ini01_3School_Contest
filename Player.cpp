@@ -217,13 +217,33 @@ void Player::Update()
 				boxPosition.z - boxScale.z - skin < m_Position.z && m_Position.z < boxPosition.z + boxScale.z + skin)
 			{
 				// resolve along whichever axis has the smallest penetration
-				// (simple minimum-translation-vector push-out)
+				// (simple minimum-translation-vector push-out). Only top/X/Z
+				// are real cases here -- every wall sits on the floor with
+				// its bottom at Y=0, same as the grounded player, so there's
+				// no "player below the box" case to handle (deliberately no
+				// penBottom: an earlier version of this code computed it and
+				// fed it into the min() below with no branch to handle it
+				// actually being picked, so it silently fell into the Z push
+				// branch instead. Since the player's Y sits right at a
+				// wall's bottom essentially every frame, that bogus "bottom"
+				// value was almost always the smallest of the four and kept
+				// winning, so real X/Z pushes almost never ran -- the player
+				// walked through every wall with no resistance at all).
 				float penTop = (boxPosition.y + boxScale.y) - m_Position.y;
-				float penBottom = m_Position.y - (boxPosition.y - boxScale.y);
 				float penX = boxScale.x - std::fabs(m_Position.x - boxPosition.x);
 				float penZ = boxScale.z - std::fabs(m_Position.z - boxPosition.z);
 
-				float minPen = std::min(std::min(penTop, penBottom), std::min(penX, penZ));
+				float minPen = std::min(penTop, std::min(penX, penZ));
+
+				// push out a bit further than the exact boundary. The camera
+				// sits at the player's XZ position, and pushing to exactly
+				// touching (distance 0) leaves the wall surface closer than
+				// the 0.1 near-clip plane the instant you look straight at
+				// it -- which clips the whole thing out of view, i.e. it
+				// "disappears" specifically when you turn to face it. This
+				// clearance keeps the camera far enough back that never
+				// happens.
+				const float pushClearance = 0.3f;
 
 				if (minPen == penTop)
 				{
@@ -234,16 +254,16 @@ void Player::Update()
 				else if (minPen == penX)
 				{
 					if (m_Position.x < boxPosition.x)
-						m_Position.x = boxPosition.x - boxScale.x;
+						m_Position.x = boxPosition.x - boxScale.x - pushClearance;
 					else
-						m_Position.x = boxPosition.x + boxScale.x;
+						m_Position.x = boxPosition.x + boxScale.x + pushClearance;
 				}
 				else
 				{
 					if (m_Position.z < boxPosition.z)
-						m_Position.z = boxPosition.z - boxScale.z;
+						m_Position.z = boxPosition.z - boxScale.z - pushClearance;
 					else
-						m_Position.z = boxPosition.z + boxScale.z;
+						m_Position.z = boxPosition.z + boxScale.z + pushClearance;
 				}
 			}
 		}
