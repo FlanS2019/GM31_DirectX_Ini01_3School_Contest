@@ -137,6 +137,7 @@
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="manager.cpp" />
+    <ClCompile Include="Map.cpp" />
     <ClCompile Include="particle.cpp" />
     <ClCompile Include="result.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -158,6 +159,7 @@
     <ClInclude Include="gameObject.h" />
     <ClInclude Include="Grass.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="Map.h" />
     <ClInclude Include="modelRenderer.h" />
     <ClInclude Include="particle.h" />
     <ClInclude Include="Player.h" />

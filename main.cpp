@@ -4,7 +4,7 @@
 #include <thread>
 
 const wchar_t* CLASS_NAME = L"AppClass";
-const wchar_t* WINDOW_NAME = L"”p•a‰@ - 0:00";
+const wchar_t* WINDOW_NAME = L"abandoned hospital,0:00";
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 

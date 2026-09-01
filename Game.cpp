@@ -15,6 +15,7 @@
 #include "explosion.h"
 #include "box.h"
 #include "particle.h"
+#include "Map.h"
 #include "Game.h"
 #include "title.h"
 #include "result.h"
@@ -31,17 +32,15 @@ void Game::Init()
 	Manager::AddGameObject<Camera>();
 	Manager::AddGameObject<Field>();
 	Manager::AddGameObject<Player>();
-	Manager::AddGameObject<Tree>()->SetPosition({ -10.0f, 0.0f, 10.0f });
-	Manager::AddGameObject<Particle>()->SetPosition({ -2.0f, 1.0f, 2.0f });
-	//Manager::AddGameObject<Shadow>();
+	Manager::AddGameObject<Map>(); // hospital blockout (walls); Field above is still the floor
 	Manager::AddGameObject<Score>()->Init();
 	Manager::AddGameObject<BgmPlayer>();
 
-	//enemyを10個増やす
-	for (int i = 0; i < 1; i++)
-	{
-		Manager::AddGameObject<enemy>()->SetPosition({ -2.0f + i * 12.0f, 0.0f, 7.0f });
-	}
+	// NOTE: Tree / Particle / enemy spawns from the original template are
+	// left out here since they don't belong in the hospital scene. The old
+	// "kill all enemies -> result scene" win condition in Update() below is
+	// also stale now that there's no combat -- flag for when the escape/
+	// exit trigger gets built (STEP8 in the spec).
 
 	//Box* box = Manager::AddGameObject<Box>();
 	//box->SetPosition({ 2.0f, 0.0f, 5.0f });
@@ -60,12 +59,7 @@ void Game::Uninit()
 
 void Game::Update()
 {
-	auto enemies = Manager::GetGameObjects<enemy>();
-	if(enemies.size() == 0)
-	{
-		Manager::ChangeScene<result>(2.0f);//敵が全滅したら結果画面に遷移
-	}
-	// パーティクル停止
+	// stop particles
 	if (Input::GetKeyPress(VK_F2))
 	{
 		auto particles = Manager::GetGameObjects<Particle>();
@@ -76,7 +70,7 @@ void Game::Update()
 		}
 	}
 
-	// パーティクル再開
+	// resume particles
 	if (Input::GetKeyPress(VK_F3))
 	{
 		auto particles = Manager::GetGameObjects<Particle>();

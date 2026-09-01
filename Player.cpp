@@ -17,7 +17,7 @@ void Player::Init()
 {
 	m_Layer = 2;
 
-	m_Position = { 0, 0, 0 };// 初期位置を設定
+	m_Position = { 0, 0, 0 }; // start position
 
 	ModelRenderer* modelRenderer = AddComponent<ModelRenderer>();
 	modelRenderer->Load("model\\player.obj");
@@ -42,52 +42,38 @@ void Player::Uninit()
 
 void Player::Update()
 {
-	// フレーム固定の簡易 dt（実際は実時間差を使うのが望ましい）
+	// fixed-step dt (fine for a school-contest build; swap for a real delta time later)
 	float dt = 1.0f / 60.0f;
-	// パラメータ
-	const float accel = 1.0f;    // 加速度 (units/s^2)
-	const float maxSpeed = 5.0f;  // 最大速度 (units/s)
-	const float friction = 15.0f; // 減速 (units/s^2)
-	const float gravity = 60.0f;   // 重力 (units/s^2)
-	const float jumpImpulse = 25.0f; // ジャンプ初速 (units/s)
+
+	const float accel = 1.0f;
+	const float maxSpeed = 5.0f;
+	const float friction = 15.0f;
+	const float gravity = 60.0f;
+	const float jumpImpulse = 25.0f;
 
 	// --- Sprint (Shift) ---
 	const float sprintMultiplier = Input::GetKeyPress(VK_SHIFT) ? 2.0f : 1.0f;
 	const float currentAccel = accel * sprintMultiplier;
 	const float currentMaxSpeed = maxSpeed * sprintMultiplier;
 
-	// --- カメラ基準の移動方向を計算 ---
+	// --- First-person: body yaw always matches the camera's look direction ---
 	Camera* camera = Manager::GetGameObject<Camera>();
-	Vector3 camForward(0.0f, 0.0f, 1.0f);
-	Vector3 camRight(1.0f, 0.0f, 0.0f);
+	float camYaw = camera ? camera->GetYaw() : 0.0f;
+	m_Rotation.y = camYaw;
 
-	if (camera != nullptr)
-	{
-		Vector3 camPos = camera->GetPosition();
-		Vector3 camTarget = camera->GetTarget(); // ← Camera側にGetTarget()が必要
+	Vector3 camForward(sinf(camYaw), 0.0f, cosf(camYaw));
+	Vector3 camRight(cosf(camYaw), 0.0f, -sinf(camYaw));
 
-		camForward = camTarget - camPos;
-		camForward.y = 0.0f; // 水平成分だけ使う
-		float camForwardLen = camForward.length();
-		if (camForwardLen > 0.0001f)
-		{
-			camForward.x /= camForwardLen;
-			camForward.z /= camForwardLen;
-		}
-		camRight = Vector3(camForward.z, 0.0f, -camForward.x); // Forwardを90度回転
-	}
-
-	// 移動入力（カメラ基準）
+	// --- Movement input (relative to view direction) ---
 	bool moving = false;
 	float inputX = 0.0f;
 	float inputZ = 0.0f;
 
-	if (Input::GetKeyPress('D')) { inputX += 1.0f; moving = true; } // 右
-	if (Input::GetKeyPress('A')) { inputX -= 1.0f; moving = true; } // 左
-	if (Input::GetKeyPress('W')) { inputZ += 1.0f; moving = true; } // 前
-	if (Input::GetKeyPress('S')) { inputZ -= 1.0f; moving = true; } // 後ろ
+	if (Input::GetKeyPress('D')) { inputX += 1.0f; moving = true; } // right
+	if (Input::GetKeyPress('A')) { inputX -= 1.0f; moving = true; } // left
+	if (Input::GetKeyPress('W')) { inputZ += 1.0f; moving = true; } // forward
+	if (Input::GetKeyPress('S')) { inputZ -= 1.0f; moving = true; } // back
 
-	// カメラ基準の移動方向ベクトルを計算
 	Vector3 moveDir = camForward * inputZ + camRight * inputX;
 	float moveLen = moveDir.length();
 	if (moveLen > 0.0001f)
@@ -96,13 +82,12 @@ void Player::Update()
 		moveDir.z /= moveLen;
 	}
 
-	// 地面判定（小さな許容誤差を使用）
+	// --- Ground check ---
 	const float groundEpsilon = 0.001f;
 	bool grounded = (m_Position.y <= groundEpsilon);
 	bool oldGround = m_Grounded;
 	m_Grounded = false;
 
-	// 地面上でのジャンプトリガーはここで判定
 	if (grounded)
 	{
 		m_Position.y = 0.0f;
@@ -111,7 +96,7 @@ void Player::Update()
 			m_Velocity.y = jumpImpulse;
 
 			m_Scale.x = 1.0f;
-			m_Scale.y = 1.5f; // ジャンプしたときに一瞬伸びる
+			m_Scale.y = 1.5f;
 			m_Scale.z = 1.0f;
 		}
 		else
@@ -119,21 +104,21 @@ void Player::Update()
 			m_Scale.x = 1.0f;
 			m_Scale.y = 1.0f;
 			m_Scale.z = 1.0f;
-			m_JumpSE->Play(); // ← ジャンプ音再生
+			m_JumpSE->Play();
 		}
 
 		if (!oldGround && m_Grounded)
 		{
 			m_Scale.x = 1.0f;
-			m_Scale.y = 0.5f; // ジャンプから着地したときに一瞬潰れる
+			m_Scale.y = 0.5f;
 			m_Scale.z = 1.0f;
 		}
 	}
 
-	// 重力を適用
+	// gravity
 	m_Velocity.y -= gravity * dt;
 
-	// --- 摩擦（地面上の水平速度にのみ適用） ---
+	// horizontal velocity magnitude (used for friction)
 	Vector3 horizontalVel(m_Velocity.x, 0.0f, m_Velocity.z);
 	float hSpeed = std::sqrt(horizontalVel.x * horizontalVel.x + horizontalVel.z * horizontalVel.z);
 
@@ -151,25 +136,10 @@ void Player::Update()
 				m_Velocity.x *= inv;
 				m_Velocity.z *= inv;
 			}
-
-			// --- 目標の向きへ滑らかに回転させる ---
-			float targetYaw = atan2f(moveDir.x, moveDir.z);
-			float diff = targetYaw - m_Rotation.y;
-
-			// 角度差を-πからπの範囲に正規化（最短経路で回転させるため）
-			while (diff > XM_PI)  diff -= XM_2PI;
-			while (diff < -XM_PI) diff += XM_2PI;
-
-			const float rotateSpeed = 10.0f; // 大きいほど速く向きを変える。好みで調整
-			float maxStep = rotateSpeed * dt;
-			if (diff > maxStep)      diff = maxStep;
-			else if (diff < -maxStep) diff = -maxStep;
-
-			m_Rotation.y += diff;
 		}
 		else
 		{
-			// 移動入力がない場合は摩擦で減速する
+			// no input: decelerate with friction
 			if (hSpeed > 0.0f)
 			{
 				float decel = friction * dt;
@@ -188,12 +158,12 @@ void Player::Update()
 		}
 	}
 
-	// 速度を位置に反映
+	// integrate velocity into position
 	m_Position.x += m_Velocity.x * dt;
 	m_Position.y += m_Velocity.y * dt;
 	m_Position.z += m_Velocity.z * dt;
 
-	// 地面衝突判定（位置反映後に行う）
+	// floor collision
 	if (m_Position.y < 0.0f)
 	{
 		m_Position.y = 0.0f;
@@ -201,7 +171,7 @@ void Player::Update()
 		m_Grounded = true;
 	}
 
-	// 木の当たり判定
+	// tree collision
 	auto trees = Manager::GetGameObjects<Tree>();
 	for (auto tree : trees)
 	{
@@ -214,7 +184,7 @@ void Player::Update()
 		}
 	}
 
-	// ボックスとの衝突判定
+	// box collision
 	auto boxes = Manager::GetGameObjects<Box>();
 	for (auto box : boxes)
 	{
@@ -224,23 +194,41 @@ void Player::Update()
 			boxPosition.y - boxScale.y < m_Position.y && m_Position.y < boxPosition.y + boxScale.y &&
 			boxPosition.z - boxScale.z < m_Position.z && m_Position.z < boxPosition.z + boxScale.z)
 		{
-			if (boxPosition.y + boxScale.y - m_Position.y < m_Position.y - (boxPosition.y - boxScale.y))
+			// resolve along whichever axis has the smallest penetration
+			// (simple minimum-translation-vector push-out). Needed now that
+			// Box is also used for the map's walls, which have to block
+			// movement on both X and Z, not just X.
+			float penTop = (boxPosition.y + boxScale.y) - m_Position.y;
+			float penBottom = m_Position.y - (boxPosition.y - boxScale.y);
+			float penX = boxScale.x - std::fabs(m_Position.x - boxPosition.x);
+			float penZ = boxScale.z - std::fabs(m_Position.z - boxPosition.z);
+
+			float minPen = std::min(std::min(penTop, penBottom), std::min(penX, penZ));
+
+			if (minPen == penTop)
 			{
 				m_Position.y = boxPosition.y + boxScale.y;
 				if (m_Velocity.y < 0.0f) m_Velocity.y = 0.0f;
 				m_Grounded = true;
 			}
-			else
+			else if (minPen == penX)
 			{
 				if (m_Position.x < boxPosition.x)
 					m_Position.x = boxPosition.x - boxScale.x;
 				else
 					m_Position.x = boxPosition.x + boxScale.x;
 			}
+			else
+			{
+				if (m_Position.z < boxPosition.z)
+					m_Position.z = boxPosition.z - boxScale.z;
+				else
+					m_Position.z = boxPosition.z + boxScale.z;
+			}
 		}
 	}
 
-	if (Input::GetKeyTrigger('F')) // 弾発射
+	if (Input::GetKeyTrigger('F')) // fire (keep or remove later depending on the game design)
 	{
 		OutputDebugStringA("Bullet Create\n");
 		Bullet* bullet = Manager::AddGameObject<Bullet>();
@@ -264,15 +252,26 @@ void Player::Update()
 
 void Player::Draw()
 {
+	// The camera sits at the player's eye height, inside this mesh, so drawing
+	// the placeholder body here puts its head/nose geometry right against the
+	// near plane and it fills the screen. Skip drawing the body in first person
+	// until a real model (or a proper first-person arms/view-model) is in.
+	// Flip this back to true once that's ready.
+	const bool kDrawBody = false;
+	if (!kDrawBody)
+	{
+		return;
+	}
+
 	Renderer::GetDeviceContext()->IASetInputLayout(m_VertexLayout);
 
 	Renderer::GetDeviceContext()->VSSetShader(m_VertexShader, NULL, 0);
 	Renderer::GetDeviceContext()->PSSetShader(m_PixelShader, NULL, 0);
 
 	XMMATRIX world, scale, rot, trans;
-	scale = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z);//拡大率
-	rot = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y + XM_PI, m_Rotation.z);//回転量
-	trans = XMMatrixTranslation(m_Position.x, m_Position.y, m_Position.z);//平行移動量
+	scale = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z);
+	rot = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y + XM_PI, m_Rotation.z);
+	trans = XMMatrixTranslation(m_Position.x, m_Position.y, m_Position.z);
 	world = scale * rot * trans;
 
 	Renderer::SetWorldMatrix(world);

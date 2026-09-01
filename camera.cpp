@@ -7,10 +7,9 @@
 
 void Camera::Init()
 {
-	m_Position = { 0, 5, -20 };
-	//m_Yaw = 0.0f;    // 追加
-	//m_Pitch = 0.3f;  // 追加
-	//m_Distance = 8.0f; // 追加
+	m_Yaw = 0.0f;
+	m_Pitch = 0.0f;
+	m_Position = { 0, 1.6f, 0 };
 }
 
 void Camera::Uninit()
@@ -19,36 +18,42 @@ void Camera::Uninit()
 
 void Camera::Update()
 {
+	// --- Mouse look ---
+	const float sensitivity = 0.0025f; // radians per pixel, tune to taste
+	const float pitchLimit = 1.5f;     // ~85 degrees, avoids gimbal flip
+
+	float dx = Input::GetMouseDeltaX();
+	float dy = Input::GetMouseDeltaY();
+
+	m_Yaw += dx * sensitivity;
+	m_Pitch -= dy * sensitivity; // moving mouse up -> look up
+
+	if (m_Pitch > pitchLimit)  m_Pitch = pitchLimit;
+	if (m_Pitch < -pitchLimit) m_Pitch = -pitchLimit;
+
+	while (m_Yaw > XM_PI)  m_Yaw -= XM_2PI;
+	while (m_Yaw < -XM_PI) m_Yaw += XM_2PI;
+
+	// --- Position: locked to the player's eye height ---
 	Player* player = Manager::GetGameObject<Player>();
-	Vector3 playerPos = player->GetPosition();
-	float playerYaw = player->GetRotation().y; // プレイヤーの向き（Yaw）を取得
+	Vector3 playerPos = player ? player->GetPosition() : Vector3(0.0f, 0.0f, 0.0f);
 
-	float t = 0.1f;
-	m_Target = m_Target * (1.0f - t) + (playerPos + Vector3(0.0f, 2.0f, 0.0f)) * t;
+	const float eyeHeight = 1.6f; // adjust to match the player collider later
+	m_Position = playerPos + Vector3(0.0f, eyeHeight, 0.0f);
 
-	const float tXZ = 0.1f;  // 水平方向の追従速度
-	const float tY = 0.04f; // 垂直方向はより緩やかに（ジャンプの影響を抑える）
+	// --- Look direction from yaw/pitch ---
+	Vector3 forward;
+	forward.x = cosf(m_Pitch) * sinf(m_Yaw);
+	forward.y = sinf(m_Pitch);
+	forward.z = cosf(m_Pitch) * cosf(m_Yaw);
+	forward.normalize();
 
-	m_Target.x = m_Target.x * (1.0f - tXZ) + m_Target.x * tXZ;
-	m_Target.z = m_Target.z * (1.0f - tXZ) + m_Target.z * tXZ;
-	m_Target.y = m_Target.y * (1.0f - tY) + m_Target.y * tY;
-	// プレイヤーの背後にカメラを配置（プレイヤーの向きに応じて回り込む）
-	const float distance = 8.0f;  // プレイヤーとの水平距離
-	const float height = 4.0f;    // プレイヤーの上に何m上げるか
-
-	Vector3 desiredPosition = playerPos
-		+ Vector3(
-			-sinf(playerYaw) * distance,
-			height,
-			-cosf(playerYaw) * distance
-		);
-
-	m_Position = m_Position * (1.0f - t) + desiredPosition * t;
+	m_Target = m_Position + forward;
 }
 
 void Camera::Draw()
 {
-	//projection行列の作成
+	// build the projection matrix
 	XMMATRIX projection = XMMatrixPerspectiveFovLH
 	(1, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 1000.0f);
 
