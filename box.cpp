@@ -51,10 +51,16 @@ void Box::Draw()
 	Renderer::GetDeviceContext()->VSSetShader(m_VertexShader, NULL, 0);
 	Renderer::GetDeviceContext()->PSSetShader(m_PixelShader, NULL, 0);
 
+	// box.obj's own pivot sits at its base (local Y runs 0..2), while X/Z
+	// are centered (-1..1). Everywhere that uses this class -- the box/wall
+	// collision code, Map.cpp's wall placement -- treats GetPosition() as
+	// the box's CENTER and GetScale() as its half-extent on every axis. So
+	// shift the draw down by m_Scale.y to line the visible mesh up with
+	// that center, instead of changing the position/collision convention.
 	XMMATRIX world, scale, rot, trans;
-	scale = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z);//ägëÂó¶
-	rot = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y, m_Rotation.z);//
-	trans = XMMatrixTranslation(m_Position.x, m_Position.y, m_Position.z);//ïΩçsà⁄ìÆó 
+	scale = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z); // scale factor
+	rot = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y, m_Rotation.z);
+	trans = XMMatrixTranslation(m_Position.x, m_Position.y - m_Scale.y, m_Position.z);
 	world = scale * rot * trans;
 
 	Renderer::SetWorldMatrix(world);

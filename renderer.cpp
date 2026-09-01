@@ -33,9 +33,6 @@ void Renderer::Init()
 {
 	HRESULT hr = S_OK;
 
-
-
-
 	// デバイス、スワップチェーン作成
 	DXGI_SWAP_CHAIN_DESC swapChainDesc{};
 	swapChainDesc.BufferCount = 1;
@@ -120,7 +117,7 @@ void Renderer::Init()
 	// ラスタライザステート設定
 	D3D11_RASTERIZER_DESC rasterizerDesc{};
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID; 
-	rasterizerDesc.CullMode = D3D11_CULL_BACK; 
+	rasterizerDesc.CullMode = D3D11_CULL_NONE; 
 	rasterizerDesc.DepthClipEnable = TRUE; 
 	rasterizerDesc.MultisampleEnable = FALSE; 
 

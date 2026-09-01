@@ -184,46 +184,67 @@ void Player::Update()
 		}
 	}
 
-	// box collision
+	// box collision (also used for the map's walls)
+	// Run a few resolution passes: resolving against one wall can push the
+	// player straight into a neighboring one (very common at corners/
+	// doorways, where two wall boxes meet), and a single pass can leave the
+	// player still overlapping -> camera ends up inside a wall, and since
+	// back-face culling is on, that wall (and whatever's behind it) just
+	// isn't drawn from in there. Re-checking a couple more times converges
+	// the position to something outside every box.
 	auto boxes = Manager::GetGameObjects<Box>();
-	for (auto box : boxes)
+	const int kCollisionPasses = 4;
+	for (int pass = 0; pass < kCollisionPasses; pass++)
 	{
-		Vector3 boxPosition = box->GetPosition();
-		Vector3 boxScale = box->GetScale();
-		if (boxPosition.x - boxScale.x < m_Position.x && m_Position.x < boxPosition.x + boxScale.x &&
-			boxPosition.y - boxScale.y < m_Position.y && m_Position.y < boxPosition.y + boxScale.y &&
-			boxPosition.z - boxScale.z < m_Position.z && m_Position.z < boxPosition.z + boxScale.z)
+		for (auto box : boxes)
 		{
-			// resolve along whichever axis has the smallest penetration
-			// (simple minimum-translation-vector push-out). Needed now that
-			// Box is also used for the map's walls, which have to block
-			// movement on both X and Z, not just X.
-			float penTop = (boxPosition.y + boxScale.y) - m_Position.y;
-			float penBottom = m_Position.y - (boxPosition.y - boxScale.y);
-			float penX = boxScale.x - std::fabs(m_Position.x - boxPosition.x);
-			float penZ = boxScale.z - std::fabs(m_Position.z - boxPosition.z);
+			Vector3 boxPosition = box->GetPosition();
+			Vector3 boxScale = box->GetScale();
 
-			float minPen = std::min(std::min(penTop, penBottom), std::min(penX, penZ));
+			// A wall's bottom is exactly at Y=0 (boxPosition.y - boxScale.y,
+			// with WALL_HEIGHT/2 for both), and the player's grounded Y is
+			// forced to exactly 0.0f every frame by the floor-collision code
+			// above. "0.0 < 0.0" is always false, so without this margin the
+			// Y check never overlaps while grounded -- the player walks
+			// straight through every wall with zero resistance, no matter
+			// how many resolution passes run. This was almost certainly why
+			// walls seemed to "disappear": nothing ever blocked movement, so
+			// walking (or turning and walking) carries the camera straight
+			// through a wall and out into the open field beyond it.
+			const float skin = 0.05f;
+			if (boxPosition.x - boxScale.x - skin < m_Position.x && m_Position.x < boxPosition.x + boxScale.x + skin &&
+				boxPosition.y - boxScale.y - skin < m_Position.y && m_Position.y < boxPosition.y + boxScale.y + skin &&
+				boxPosition.z - boxScale.z - skin < m_Position.z && m_Position.z < boxPosition.z + boxScale.z + skin)
+			{
+				// resolve along whichever axis has the smallest penetration
+				// (simple minimum-translation-vector push-out)
+				float penTop = (boxPosition.y + boxScale.y) - m_Position.y;
+				float penBottom = m_Position.y - (boxPosition.y - boxScale.y);
+				float penX = boxScale.x - std::fabs(m_Position.x - boxPosition.x);
+				float penZ = boxScale.z - std::fabs(m_Position.z - boxPosition.z);
 
-			if (minPen == penTop)
-			{
-				m_Position.y = boxPosition.y + boxScale.y;
-				if (m_Velocity.y < 0.0f) m_Velocity.y = 0.0f;
-				m_Grounded = true;
-			}
-			else if (minPen == penX)
-			{
-				if (m_Position.x < boxPosition.x)
-					m_Position.x = boxPosition.x - boxScale.x;
+				float minPen = std::min(std::min(penTop, penBottom), std::min(penX, penZ));
+
+				if (minPen == penTop)
+				{
+					m_Position.y = boxPosition.y + boxScale.y;
+					if (m_Velocity.y < 0.0f) m_Velocity.y = 0.0f;
+					m_Grounded = true;
+				}
+				else if (minPen == penX)
+				{
+					if (m_Position.x < boxPosition.x)
+						m_Position.x = boxPosition.x - boxScale.x;
+					else
+						m_Position.x = boxPosition.x + boxScale.x;
+				}
 				else
-					m_Position.x = boxPosition.x + boxScale.x;
-			}
-			else
-			{
-				if (m_Position.z < boxPosition.z)
-					m_Position.z = boxPosition.z - boxScale.z;
-				else
-					m_Position.z = boxPosition.z + boxScale.z;
+				{
+					if (m_Position.z < boxPosition.z)
+						m_Position.z = boxPosition.z - boxScale.z;
+					else
+						m_Position.z = boxPosition.z + boxScale.z;
+				}
 			}
 		}
 	}
