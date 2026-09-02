@@ -1,6 +1,6 @@
 # Blender v3.2.1 OBJ File: 'player.blend'
 # www.blender.org
-mtllib plaer.mtl
+mtllib player.mtl
 o Cone
 v 0.000000 1.300000 -0.500000
 v 0.039018 1.303843 -0.500000
