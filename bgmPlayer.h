@@ -11,7 +11,7 @@ public:
 	void Init() override
 	{
 		m_Bgm = AddComponent<Audio>();
-		m_Bgm->Load("audio\\bgm.wav");
+		m_Bgm->Load("audio\\BGM\\bgm.wav");
 		m_Bgm->Play(true); // ƒ‹[ƒvÄ¶
 	}
 	void Uninit() override

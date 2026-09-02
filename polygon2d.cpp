@@ -5,7 +5,7 @@
 
 void Polygon2D::Init(float x,float y, float width, float Height, const WCHAR* TextureName)
 {
-	//m_Layer = 9;
+	m_Layer = 9;
 
 	VERTEX_3D vertex[4];
 

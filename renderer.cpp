@@ -306,11 +306,11 @@ void Renderer::SetATCEnable( bool Enable )
 void Renderer::SetWorldViewProjection2D()
 {
 	SetWorldMatrix(XMMatrixIdentity());
-	//SetViewMatrix(XMMatrixIdentity());
+	SetViewMatrix(XMMatrixIdentity());
 
 	XMMATRIX projection;
 	projection = XMMatrixOrthographicOffCenterLH(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, 0.0f, 1.0f);
-	//SetProjectionMatrix(projection);
+	SetProjectionMatrix(projection);
 }
 
 

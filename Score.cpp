@@ -5,7 +5,7 @@
 
 void Score::Init()
 {
-    //m_Layer = 9;
+    m_Layer = 9;
 
     VERTEX_3D vertex[4];
 
