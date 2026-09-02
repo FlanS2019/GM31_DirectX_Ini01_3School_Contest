@@ -293,6 +293,8 @@ void Player::Update()
 
 		for (auto box : boxes)
 		{
+			if (!box->IsBlocking()) continue; // e.g. a Door that's (fully) open
+
 			Vector3 boxPosition = box->GetPosition();
 			Vector3 boxScale = box->GetScale();
 

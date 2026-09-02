@@ -16,4 +16,10 @@ public:
 	void Uninit()override;
 	void Update()override;
 	void Draw()override;
+
+	// Player.cpp's box-collision loop (Manager::GetGameObjects<Box>()) calls
+	// this before resolving a wall's overlap; a subclass that shouldn't
+	// always block (Door, while open) overrides it. Defaults to true so
+	// every plain Box keeps blocking exactly like before.
+	virtual bool IsBlocking() const { return true; }
 };
