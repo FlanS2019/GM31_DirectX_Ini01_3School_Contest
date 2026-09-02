@@ -12,13 +12,23 @@ private:
 	bool m_Grounded = true;
 	float m_MoveAnimetion = 0.0f;
 	float m_CameraZ = 0.0f;
-	// ƒRƒ“ƒ|[ƒlƒ“ƒgQÆiInit ‚Å AddComponent ‚µ‚Ä•Ûj
+	// ï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½Qï¿½ÆiInit ï¿½ï¿½ AddComponent ï¿½ï¿½ï¿½Ä•Ûï¿½ï¿½j
 	class Transform* m_Transform = nullptr;
-	class Audio* m_JumpSE = nullptr; // ƒWƒƒƒ“ƒv‰¹
-	class Shadow* m_Shadow = nullptr; // ƒVƒƒƒhƒEƒIƒuƒWƒFƒNƒg‚Ö‚ÌQÆ
+	class Audio* m_JumpSE = nullptr; // ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½
+	class Shadow* m_Shadow = nullptr; // ï¿½Vï¿½ï¿½ï¿½hï¿½Eï¿½Iï¿½uï¿½Wï¿½Fï¿½Nï¿½gï¿½Ö‚ÌQï¿½ï¿½
 public:
 	void Init()override;
 	void Uninit()override;
 	void Update()override;
 	void Draw()override;
+
+	// Key inventory: STEP2 doors/gimmicks. One bit per key id (id 0..31 -- a
+	// bitmask is overkill-proof for a maze this size and needs no container).
+	// Key::Update() calls AddKey() on pickup; Door::Update() calls HasKey()
+	// before letting a locked door open.
+	void AddKey(int id) { if (id >= 0 && id < 32) m_KeyMask |= (1u << id); }
+	bool HasKey(int id) const { return id >= 0 && id < 32 && (m_KeyMask & (1u << id)) != 0; }
+
+private:
+	unsigned int m_KeyMask = 0;
 };

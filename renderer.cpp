@@ -150,10 +150,6 @@ void Renderer::Init()
 	float blendFactor[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 	m_DeviceContext->OMSetBlendState(m_BlendState, blendFactor, 0xffffffff );
 
-
-
-
-
 	// デプスステンシルステート設定
 	D3D11_DEPTH_STENCIL_DESC depthStencilDesc{};
 	depthStencilDesc.DepthEnable = TRUE;
@@ -351,10 +347,6 @@ void Renderer::SetLight( LIGHT Light )
 {
 	m_DeviceContext->UpdateSubresource(m_LightBuffer, 0, NULL, &Light, 0, 0);
 }
-
-
-
-
 
 void Renderer::CreateVertexShader( ID3D11VertexShader** VertexShader, ID3D11InputLayout** VertexLayout, const char* FileName )
 {

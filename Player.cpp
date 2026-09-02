@@ -65,7 +65,7 @@ void Player::Init()
 	Renderer::CreatePixelShader(&m_PixelShader, "shader\\unlitTexturePS.cso");
 
 	m_JumpSE = AddComponent<Audio>();
-	m_JumpSE->Load("audio\\wan.mp3");
+	m_JumpSE->Load("audio\\SE\\wan.mp3");
 
 	m_Shadow = Manager::AddGameObject<Shadow>();
 	m_Shadow->SetScale({ 5.0f, 5.0f, 5.0f });
@@ -293,6 +293,8 @@ void Player::Update()
 
 		for (auto box : boxes)
 		{
+			if (!box->IsBlocking()) continue; // e.g. a Door that's (fully) open
+
 			Vector3 boxPosition = box->GetPosition();
 			Vector3 boxScale = box->GetScale();
 
