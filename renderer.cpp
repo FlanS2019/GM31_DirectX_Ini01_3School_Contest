@@ -150,10 +150,6 @@ void Renderer::Init()
 	float blendFactor[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 	m_DeviceContext->OMSetBlendState(m_BlendState, blendFactor, 0xffffffff );
 
-
-
-
-
 	// デプスステンシルステート設定
 	D3D11_DEPTH_STENCIL_DESC depthStencilDesc{};
 	depthStencilDesc.DepthEnable = TRUE;
@@ -310,11 +306,11 @@ void Renderer::SetATCEnable( bool Enable )
 void Renderer::SetWorldViewProjection2D()
 {
 	SetWorldMatrix(XMMatrixIdentity());
-	SetViewMatrix(XMMatrixIdentity());
+	//SetViewMatrix(XMMatrixIdentity());
 
 	XMMATRIX projection;
 	projection = XMMatrixOrthographicOffCenterLH(0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0f, 0.0f, 1.0f);
-	SetProjectionMatrix(projection);
+	//SetProjectionMatrix(projection);
 }
 
 

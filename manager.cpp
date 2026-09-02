@@ -111,6 +111,8 @@ void Manager::Draw()
 
 	if (camera)
 	{
+		camera->Draw();
+
 		Vector3 forward = camera->GetForward();
 		Vector3 position = camera->GetPosition();
 
