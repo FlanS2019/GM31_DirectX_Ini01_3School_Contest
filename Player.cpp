@@ -412,7 +412,7 @@ void Player::Update()
 		}
 	}
 
-	if (Input::GetKeyTrigger('F')) // fire (keep or remove later depending on the game design)
+	if (Input::GetKeyTrigger('M')) // fire (keep or remove later depending on the game design)
 	{
 		DebugLog("Bullet Create\n");
 		Bullet* bullet = Manager::AddGameObject<Bullet>();
@@ -430,14 +430,6 @@ void Player::Update()
 	shadowPos.y = 0.05f;
 	m_Shadow->SetPosition(shadowPos);
 
-	// --- DEBUG: one line per frame with the final position, regardless of
-	// whether any collision happened. The [COLLIDE] lines only fire when
-	// touching a box, so a jump that happens while NOT touching anything
-	// (e.g. mid-air, or in open floor) would otherwise leave zero trace.
-	// This closes that gap -- with the on-screen frame counter, any jump
-	// shows up as a big gap between consecutive lines' position, at an
-	// exact, readable frame number. Cheap to leave running for our short
-	// test sessions; delete once the bug's confirmed fixed.
 	{
 		char buf[128];
 		sprintf_s(buf, "[POS] frame=%u pos=(%.2f,%.2f,%.2f)\n",
@@ -451,11 +443,6 @@ void Player::Update()
 
 void Player::Draw()
 {
-	// The camera sits at the player's eye height, inside this mesh, so drawing
-	// the placeholder body here puts its head/nose geometry right against the
-	// near plane and it fills the screen. Skip drawing the body in first person
-	// until a real model (or a proper first-person arms/view-model) is in.
-	// Flip this back to true once that's ready.
 	const bool kDrawBody = false;
 	if (!kDrawBody)
 	{
