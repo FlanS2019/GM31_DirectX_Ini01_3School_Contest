@@ -24,12 +24,14 @@ struct MATERIAL
 struct LIGHT
 {
 	BOOL		Enable;
-	BOOL		Dummy[3];
-	XMFLOAT4	Direction;
+	BOOL		IsSpot;     // false = old-style infinite directional light; true = handheld flashlight (STEP5)
+	BOOL		Dummy[2];
+	XMFLOAT4	Direction;  // directional: the light's direction. spot: the direction it's aimed.
 	XMFLOAT4	Diffuse;
 	XMFLOAT4	Ambient;
+	XMFLOAT4	Position;   // spot light origin (world space); unused when IsSpot is false
+	XMFLOAT4	SpotParams; // x = cos(inner cone), y = cos(outer cone), z = range, w unused
 };
-
 
 
 class Renderer

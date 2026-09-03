@@ -22,6 +22,7 @@
 #include "Score.h"
 #include "bgmPlayer.h"
 #include "shadow.h"
+#include "light.h"
 #include <list>
 
 
@@ -35,12 +36,7 @@ void Game::Init()
 	Manager::AddGameObject<Map>(); // hospital blockout (walls); Field above is still the floor
 	Manager::AddGameObject<Score>()->Init();
 	Manager::AddGameObject<BgmPlayer>();
-
-	// NOTE: Tree / Particle / enemy spawns from the original template are
-	// left out here since they don't belong in the hospital scene. The old
-	// "kill all enemies -> result scene" win condition in Update() below is
-	// also stale now that there's no combat -- flag for when the escape/
-	// exit trigger gets built (STEP8 in the spec).
+	Manager::AddGameObject<Light>(); 
 
 	//Box* box = Manager::AddGameObject<Box>();
 	//box->SetPosition({ 2.0f, 0.0f, 5.0f });

@@ -19,9 +19,6 @@ cbuffer CameraBuffer : register(b5)
 	float4 CameraPosition;
 }
 
-
-
-
 struct MATERIAL
 {
 	float4 Ambient;
@@ -38,26 +35,22 @@ cbuffer MaterialBuffer : register(b3)
 	MATERIAL Material;
 }
 
-
-
-
 struct LIGHT
 {
-	bool Enable;
-	bool3 Dummy;
-	float4 Direction;
-	float4 Diffuse;
-	float4 Ambient;
+    bool Enable;
+    bool IsSpot; // false = old-style infinite directional light; true = handheld flashlight (STEP5)
+    bool2 Dummy;
+    float4 Direction;
+    float4 Diffuse;
+    float4 Ambient;
+    float4 Position;
+    float4 SpotParams; // x = cos(inner cone), y = cos(outer cone), z = range, w unused
 };
 
 cbuffer LightBuffer : register(b4)
 {
 	LIGHT Light;
 }
-
-
-
-
 
 struct VS_IN
 {
@@ -67,10 +60,11 @@ struct VS_IN
 	float2 TexCoord		: TEXCOORD0;
 };
 
-
 struct PS_IN
 {
-	float4 Position		: SV_POSITION;
-	float4 Diffuse		: COLOR0;
-	float2 TexCoord		: TEXCOORD0;
+    float4 Position : SV_POSITION;
+    float4 Diffuse : COLOR0;
+    float2 TexCoord : TEXCOORD0;
+    float3 Normal : NORMAL0;
+    float3 WorldPos : TEXCOORD1;
 };

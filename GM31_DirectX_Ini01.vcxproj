@@ -137,6 +137,7 @@
     <ClCompile Include="Grass.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="key.cpp" />
+    <ClCompile Include="light.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="manager.cpp" />
     <ClCompile Include="Map.cpp" />
@@ -164,6 +165,7 @@
     <ClInclude Include="Grass.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="key.h" />
+    <ClInclude Include="light.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="modelRenderer.h" />
     <ClInclude Include="particle.h" />
