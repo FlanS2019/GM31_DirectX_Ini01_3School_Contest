@@ -8,12 +8,21 @@
 // why it's a Box subclass instead of a standalone GameObject.
 class Door : public Box
 {
+public:
+	// Which way the slab slides as it opens. Up is the original behaviour
+	// (slides into the ceiling space); the X/Z ones slide sideways along
+	// the world axis instead (into the neighbouring wall's footprint --
+	// fine for this blockout style, see Update()'s comment). Pick whichever
+	// direction actually clears this particular doorway.
+	enum class SlideDirection { Up, PosX, NegX, PosZ, NegZ };
+
 private:
 	int m_RequiredKeyId = -1; // -1 = no key needed, 'E' alone opens it
 	bool m_Open = false;      // true once opening has been triggered
 	float m_OpenT = 0.0f;     // 0 = closed, 1 = fully open
-	float m_BaseY = 0.0f;     // Y position the door was placed at (closed)
-	bool m_BaseYCaptured = false;
+	SlideDirection m_SlideDirection = SlideDirection::Up;
+	Vector3 m_BasePosition;   // position the door was placed at (closed)
+	bool m_BaseCaptured = false;
 
 public:
 	void Init()override;
@@ -24,6 +33,9 @@ public:
 	// Map.cpp calls this right after AddGameObject<Door>() to lock it to a
 	// specific key id; leave untouched for a door that only needs 'E'.
 	void SetRequiredKey(int keyId) { m_RequiredKeyId = keyId; }
+
+	// Defaults to Up (the original vertical slide) if never called.
+	void SetSlideDirection(SlideDirection dir) { m_SlideDirection = dir; }
 
 	// Switch calls this to open the door regardless of key/distance.
 	// Safe to call repeatedly (no-op once already open).

@@ -23,16 +23,39 @@ void Door::Init()
 	Box::Init(); // loads model\box.obj / box.mtl -- same look as every wall
 }
 
+namespace
+{
+	// How far (in world axes) it travels to fully clear the doorway, given
+	// which way it's sliding. Up uses the slab's own height (slides its
+	// full height into the ceiling space). PosX/NegX/PosZ/NegZ use the
+	// slab's width along that axis instead, so it slides exactly one
+	// slab-width sideways -- into the footprint of whatever wall segment
+	// sits next to it. There's no door "pocket" geometry in this blockout,
+	// so that's a visual overlap, not a real recess; fine for now.
+	Vector3 OpenOffset(Door::SlideDirection dir, const Vector3& scale)
+	{
+		switch (dir)
+		{
+		case Door::SlideDirection::PosX: return Vector3(2.0f * scale.x, 0.0f, 0.0f);
+		case Door::SlideDirection::NegX: return Vector3(-2.0f * scale.x, 0.0f, 0.0f);
+		case Door::SlideDirection::PosZ: return Vector3(0.0f, 0.0f, 2.0f * scale.z);
+		case Door::SlideDirection::NegZ: return Vector3(0.0f, 0.0f, -2.0f * scale.z);
+		case Door::SlideDirection::Up:
+		default:                         return Vector3(0.0f, 2.0f * scale.y, 0.0f);
+		}
+	}
+}
+
 void Door::Update()
 {
 	// Map.cpp sets the door's position via SetPosition() *after*
 	// AddGameObject<Door>() runs (same pattern as Box), so Init() is too
-	// early to read m_Position -- capture the closed-position Y the first
-	// time Update() actually runs instead.
-	if (!m_BaseYCaptured)
+	// early to read m_Position -- capture the closed pose the first time
+	// Update() actually runs instead.
+	if (!m_BaseCaptured)
 	{
-		m_BaseY = m_Position.y;
-		m_BaseYCaptured = true;
+		m_BasePosition = m_Position;
+		m_BaseCaptured = true;
 	}
 
 	if (!m_Open)
@@ -48,8 +71,6 @@ void Door::Update()
 					m_Open = true;
 				}
 				// else: locked and missing the key -- 'E' does nothing yet.
-				// (A UI prompt/SE for "it's locked" is a nice follow-up once
-				// there's a HUD to put it on.)
 			}
 		}
 	}
@@ -59,11 +80,10 @@ void Door::Update()
 		m_OpenT += (1.0f / 60.0f) / kOpenSeconds;
 		if (m_OpenT > 1.0f) m_OpenT = 1.0f;
 
-		// Slide the whole slab straight up out of the doorway. Box::Draw()
-		// already builds its world matrix from m_Position every frame, so
-		// moving m_Position.y here is all that's needed to animate it --
-		// no Draw() override required.
-		m_Position.y = m_BaseY + m_OpenT * (2.0f * m_Scale.y);
+		// Box::Draw() already builds its world matrix from m_Position every
+		// frame, so moving m_Position here is all that's needed to animate
+		// this -- no Draw() override required, whichever direction it is.
+		m_Position = m_BasePosition + OpenOffset(m_SlideDirection, m_Scale) * m_OpenT;
 	}
 
 	Box::Update();

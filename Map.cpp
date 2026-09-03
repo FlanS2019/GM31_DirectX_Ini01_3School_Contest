@@ -80,6 +80,7 @@ void Map::Init()
 				Door* door = Manager::AddGameObject<Door>();
 				door->SetPosition({ center.x, WALL_HEIGHT / 2.0f, center.z });
 				door->SetScale({ CELL_SIZE / 2.0f, WALL_HEIGHT / 2.0f, CELL_SIZE / 2.0f });
+				door->SetSlideDirection(Door::SlideDirection::NegZ);
 				door->SetRequiredKey(0); // matches the 'K' key below
 				break;
 			}
@@ -88,6 +89,7 @@ void Map::Init()
 				Door* door = Manager::AddGameObject<Door>();
 				door->SetPosition({ center.x, WALL_HEIGHT / 2.0f, center.z });
 				door->SetScale({ CELL_SIZE / 2.0f, WALL_HEIGHT / 2.0f, CELL_SIZE / 2.0f });
+				door->SetSlideDirection(Door::SlideDirection::NegZ); // D”à‚Æ“¯‚¶‚­‰¡ƒXƒ‰ƒCƒh
 				// no SetRequiredKey() -- only the 'X' switch can open this one
 				gimmickDoor = door;
 				break;
