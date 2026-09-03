@@ -1,5 +1,5 @@
 # Flat-color placeholder material for the STEP2 Switch gimmick.
-# See key.mtl for why there's no map_Kd line.
+# No texture line here either, same reasoning as the Key material.
 newmtl Solid
 Ns 96.000000
 Ka 1.000000 1.000000 1.000000

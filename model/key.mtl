@@ -1,8 +1,6 @@
 # Flat-color placeholder material for the STEP2 Key pickup.
-# No map_Kd line on purpose: modelRenderer.cpp leaves TextureName empty when
-# map_Kd is absent, LoadFromWICFile then fails harmlessly on that empty path,
-# Texture stays null, and unlitTexturePS.hlsl falls back to Material.Diffuse
-# (i.e. Kd below) -- a flat-colored cube with no image asset required.
+# No texture line here on purpose -- this material is drawn from its
+# diffuse color alone, no image file needed.
 newmtl Solid
 Ns 96.000000
 Ka 1.000000 1.000000 1.000000
