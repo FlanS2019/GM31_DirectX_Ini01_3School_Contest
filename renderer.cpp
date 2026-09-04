@@ -1,6 +1,7 @@
 
 #include "main.h"
 #include "renderer.h"
+#include "hud.h"
 #include <io.h>
 
 
@@ -38,8 +39,7 @@ void Renderer::Init()
 	swapChainDesc.BufferCount = 1;
 	swapChainDesc.BufferDesc.Width = SCREEN_WIDTH;
 	swapChainDesc.BufferDesc.Height = SCREEN_HEIGHT;
-	swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
+	swapChainDesc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;	swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
 	swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.OutputWindow = GetWindow();
@@ -50,7 +50,7 @@ void Renderer::Init()
 	hr = D3D11CreateDeviceAndSwapChain( NULL,
 										D3D_DRIVER_TYPE_HARDWARE,
 										NULL,
-										0,
+										D3D11_CREATE_DEVICE_BGRA_SUPPORT,
 										NULL,
 										0,
 										D3D11_SDK_VERSION,
@@ -236,15 +236,14 @@ void Renderer::Init()
 	material.Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	SetMaterial(material);
 
-
-
-
+	Hud::Init();
 }
 
 
 
 void Renderer::Uninit()
 {
+	Hud::Uninit();
 
 	m_WorldBuffer->Release();
 	m_ViewBuffer->Release();

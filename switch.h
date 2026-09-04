@@ -1,12 +1,11 @@
 #pragma once
 
 #include "gameObject.h"
+#include "interactable.h"
 
 class Door;
 
-// STEP2 gimmick: walk up, press 'E', it opens whichever Door it's wired to
-// (no key needed). Doesn't block movement -- same reasoning as Key.
-class Switch : public GameObject
+class Switch : public GameObject, public Interactable
 {
 private:
 	Door* m_TargetDoor = nullptr;
@@ -22,7 +21,9 @@ public:
 	void Update()override;
 	void Draw()override;
 
-	// Map.cpp calls this right after creating both the Switch and the Door
-	// it should open, to wire them together.
+	const char* GetInteractText() override { return "E ëÄçÏ"; }
+	void Interact() override;
+	bool CanInteract() override { return !m_Used; }
+
 	void SetTargetDoor(Door* door) { m_TargetDoor = door; }
 };

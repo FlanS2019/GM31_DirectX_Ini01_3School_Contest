@@ -7,15 +7,8 @@
 #include "manager.h"
 #include "Input.h"
 
-namespace
-{
-	const float kInteractRange = 2.0f;
-}
-
 void Switch::Init()
 {
-	// A low pedestal rather than a full wall block -- shorter than a Key so
-	// the two gimmick types don't look interchangeable at a glance.
 	m_Scale = { 0.5f, 0.4f, 0.5f };
 
 	ModelRenderer* modelRenderer = AddComponent<ModelRenderer>();
@@ -34,21 +27,15 @@ void Switch::Uninit()
 
 void Switch::Update()
 {
-	if (!m_Used && m_TargetDoor)
-	{
-		Player* player = Manager::GetGameObject<Player>();
-		if (player)
-		{
-			Vector3 direction = player->GetPosition() - m_Position;
-			if (direction.length() < kInteractRange && Input::GetKeyTrigger('E'))
-			{
-				m_TargetDoor->Open();
-				m_Used = true;
-			}
-		}
-	}
-
 	GameObject::Update();
+}
+
+void Switch::Interact()
+{
+	if (m_Used || !m_TargetDoor) return;
+
+	m_TargetDoor->Open();
+	m_Used = true;
 }
 
 void Switch::Draw()

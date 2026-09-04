@@ -23,6 +23,7 @@
 #include "bgmPlayer.h"
 #include "shadow.h"
 #include "light.h"
+#include "interact.h"
 #include <list>
 
 
@@ -31,17 +32,17 @@ void Game::Init()
 	GameObject* gameObject = nullptr;
 
 	Manager::AddGameObject<Camera>();
+	Manager::AddGameObject<Light>(); // STEP4: scene lighting (dim baseline; see light.h)
 	Manager::AddGameObject<Field>();
 	Manager::AddGameObject<Player>();
 	Manager::AddGameObject<Map>(); // hospital blockout (walls); Field above is still the floor
 	Manager::AddGameObject<Score>()->Init();
 	Manager::AddGameObject<BgmPlayer>();
-	Manager::AddGameObject<Light>(); 
+	Manager::AddGameObject<Interact>(); // STEP6: interact system (see interact.h)
 
 	//Box* box = Manager::AddGameObject<Box>();
 	//box->SetPosition({ 2.0f, 0.0f, 5.0f });
 	//box->SetScale({ 2.0f, 2.0f, 2.0f });
-
 
 	//Manager::AddGameObject<Polygon2D>()->Init(0.0f, 0.0f, 200.0f, 200.0f,L"texture\\jimen.jpg");
 	//Manager::AddGameObject<Grass>()->SetPosition({ 5.0f, 0.0f, 3.0f });

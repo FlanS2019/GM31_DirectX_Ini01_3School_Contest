@@ -11,7 +11,7 @@ private:
 	float m_Pitch = 0.0f; // up/down
 
 	XMMATRIX m_ViewMatrix;
-
+	XMMATRIX m_ProjectionMatrix;
 public:
 	void Init()override;
 	void Uninit()override;
@@ -25,6 +25,9 @@ public:
 
 	XMMATRIX GetViewMatrix() {
 		return m_ViewMatrix;
+	}
+	XMMATRIX GetProjectionMatrix() {
+		return m_ProjectionMatrix;
 	}
 	Vector3 GetForward()
 	{

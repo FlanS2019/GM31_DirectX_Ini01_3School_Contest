@@ -8,8 +8,6 @@ class Light : public GameObject
 private:
 	bool m_Enable = true;
 
-	// Baseline (non-flickering, non-flashlight) mood lighting. Deliberately
-	// dark -- see the class comment above.
 	XMFLOAT4 m_Direction = XMFLOAT4(0.3f, -1.0f, 0.2f, 0.0f);
 	XMFLOAT4 m_Ambient = XMFLOAT4(0.02f, 0.02f, 0.025f, 1.0f);
 	XMFLOAT4 m_Diffuse = XMFLOAT4(0.08f, 0.08f, 0.07f, 1.0f);
@@ -19,14 +17,15 @@ private:
 	float m_FlickerTimer = 0.0f;
 	float m_FlickerNextEventTime = 0.0f; // seconds until the next on/off flip
 
-	// STEP5: flashlight state.
 	bool m_FlashlightOn = false;
-	float m_FlashlightRange = 14.0f;
-	float m_FlashlightInnerCos = 0.93f; // full brightness inside this cone
-	float m_FlashlightOuterCos = 0.82f; // fades to 0 by this cone's edge
-	XMFLOAT4 m_FlashlightDiffuse = XMFLOAT4(1.6f, 1.55f, 1.3f, 1.0f); // slightly warm bulb color
+	float m_FlashlightRange = 40.0f;
+	float m_FlashlightInnerCos = 0.70f; // full brightness inside this cone (~45 deg half-angle)
+	float m_FlashlightOuterCos = 0.40f; // fades to 0 by this cone's edge (~66 deg half-angle)
+	XMFLOAT4 m_FlashlightDiffuse = XMFLOAT4(3.2f, 3.1f, 2.7f, 1.0f); // slightly warm bulb color
 	XMFLOAT4 m_SpotPosition{};  // computed each frame from the camera, see UpdateFlashlightAim()
 	XMFLOAT4 m_SpotDirection{};
+
+	float m_FlashlightIntensityScale = 1.0f;
 
 	void Push(); // uploads the current state to Renderer::SetLight()
 	void UpdateFlashlightAim();

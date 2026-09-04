@@ -135,7 +135,10 @@
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="gameObject.cpp" />
     <ClCompile Include="Grass.cpp" />
+    <ClCompile Include="hud.cpp" />
     <ClCompile Include="Input.cpp" />
+    <ClCompile Include="interact.cpp" />
+    <ClCompile Include="interactable.cpp" />
     <ClCompile Include="key.cpp" />
     <ClCompile Include="light.cpp" />
     <ClCompile Include="main.cpp" />
@@ -163,7 +166,10 @@
     <ClInclude Include="Game.h" />
     <ClInclude Include="gameObject.h" />
     <ClInclude Include="Grass.h" />
+    <ClInclude Include="hud.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="interact.h" />
+    <ClInclude Include="interactable.h" />
     <ClInclude Include="key.h" />
     <ClInclude Include="light.h" />
     <ClInclude Include="Map.h" />
