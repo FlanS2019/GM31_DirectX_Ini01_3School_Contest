@@ -15,6 +15,8 @@ private:
 	SlideDirection m_SlideDirection = SlideDirection::Up;
 	Vector3 m_BasePosition;   // position the door was placed at (closed)
 	bool m_BaseCaptured = false;
+	bool m_IsExit = false;
+	bool m_ClearTriggered = false;
 
 public:
 	void Init()override;
@@ -33,4 +35,6 @@ public:
 	void Open() { m_Open = true; }
 
 	bool IsOpen() const { return m_OpenT >= 1.0f; }
+
+	void SetIsExit(bool isExit) { m_IsExit = isExit; }
 };

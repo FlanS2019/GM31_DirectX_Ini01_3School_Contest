@@ -3,6 +3,8 @@
 #include "player.h"
 #include "manager.h"
 #include "Input.h"
+#include "result.h"
+#include "interact.h"
 
 namespace
 {
@@ -47,6 +49,18 @@ void Door::Update()
 		m_Position = m_BasePosition + OpenOffset(m_SlideDirection, m_Scale) * m_OpenT;
 	}
 
+	if (m_IsExit && !m_ClearTriggered && m_OpenT >= 1.0f)
+	{
+		m_ClearTriggered = true;
+		OutputDebugStringA("[Door] exit opened -- CLEAR!\n");
+		// STEP12: was ChangeScene<result>() with the default Time=0 -- Manager::Update()
+		// counts that straight past zero in the SAME frame, so the whole scene (every
+		// GameObject, including this Door mid-callstack) got torn down and result::Init()
+		// ran synchronously inside this same Update() pass. A short delay lets this frame
+		// finish normally first, so the swap happens cleanly on a later frame instead.
+		Manager::ChangeScene<result>(0.5f);
+	}
+
 	Box::Update();
 }
 
@@ -68,7 +82,10 @@ void Door::Interact()
 		Player* player = Manager::GetGameObject<Player>();
 		if (!(player && player->HasKey(m_RequiredKeyId)))
 		{
+			// SPEC section 4: "E ’²‚×‚é" on a locked door just reports
+			// "Œ®‚ª‚©‚©‚Á‚Ä‚¢‚éB".
 			OutputDebugStringA("[Door] locked -- needs a key.\n");
+			Interact::ShowWarning("Œ®‚ª‚©‚©‚Á‚Ä‚¢‚éB");
 			return;
 		}
 	}

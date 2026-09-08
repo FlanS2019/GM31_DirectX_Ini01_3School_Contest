@@ -35,8 +35,8 @@ void Game::Init()
 	Manager::AddGameObject<Light>(); // STEP4: scene lighting (dim baseline; see light.h)
 	Manager::AddGameObject<Field>();
 	Manager::AddGameObject<Player>();
-	Manager::AddGameObject<Map>(); // hospital blockout (walls); Field above is still the floor
-	Manager::AddGameObject<Score>()->Init();
+	Manager::AddGameObject<Map>(); // ruins blockout (walls); Field above is still the floor
+	Manager::AddGameObject<Score>(); // AddGameObject<T>() already calls Init() once -- an extra ->Init() here used to run Score::Init() twice (leaked its old vertex buffer/shaders/texture)
 	Manager::AddGameObject<BgmPlayer>();
 	Manager::AddGameObject<Interact>(); // STEP6: interact system (see interact.h)
 

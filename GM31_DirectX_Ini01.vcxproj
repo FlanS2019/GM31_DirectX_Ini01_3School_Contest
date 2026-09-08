@@ -139,8 +139,12 @@
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="interact.cpp" />
     <ClCompile Include="interactable.cpp" />
+    <ClCompile Include="item.cpp" />
+    <ClCompile Include="itemBox.cpp" />
     <ClCompile Include="key.cpp" />
     <ClCompile Include="light.cpp" />
+    <ClCompile Include="lightTube.cpp" />
+    <ClCompile Include="lightCase.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="manager.cpp" />
     <ClCompile Include="Map.cpp" />
@@ -170,8 +174,12 @@
     <ClInclude Include="Input.h" />
     <ClInclude Include="interact.h" />
     <ClInclude Include="interactable.h" />
+    <ClInclude Include="item.h" />
+    <ClInclude Include="itemBox.h" />
     <ClInclude Include="key.h" />
     <ClInclude Include="light.h" />
+    <ClInclude Include="lightTube.h" />
+    <ClInclude Include="lightCase.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="modelRenderer.h" />
     <ClInclude Include="particle.h" />
@@ -202,16 +210,40 @@
       <FileType>Document</FileType>
     </None>
     <FxCompile Include="shader\unlitTexturePS.hlsl">
+      <!-- STEP13: ShaderType, ShaderModel and ObjectFileOutput used to be set
+           for Debug|x64 only (ObjectFileOutput also had a Debug|Win32 case,
+           but without a matching ShaderType/ShaderModel). Building anything
+           other than Debug|x64, Release|x64 included, a likely pick for a
+           final contest build, meant this .hlsl either failed to compile or
+           did not land in shader\unlitTexturePS.cso, so edits to the source
+           here could silently never reach the .cso the game actually loads
+           at runtime. Now covers all 4 configurations the same way. -->
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">shader\%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">shader\%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">shader\%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shader\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <FxCompile Include="shader\unlitTextureVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">shader\%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">shader\%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">shader\%(Filename).cso</ObjectFileOutput>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shader\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

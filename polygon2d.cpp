@@ -61,23 +61,39 @@ void Polygon2D::Init(float x,float y, float width, float Height, const WCHAR* Te
 	Renderer::GetDevice()->CreateBuffer(&bd, &sd, &m_VertexBuffer);
 
 	//シェーダーの作成
-	Renderer::CreateVertexShader(&m_VertexShader, &m_VertexLayout, "shaderunlitTextureVS.cso");
-	Renderer::CreatePixelShader(&m_PixelShader, "shaderunlitTexturePS.cso");
+	Renderer::CreateVertexShader(&m_VertexShader, &m_VertexLayout, "shader\\unlitTextureVS.cso");
+	Renderer::CreatePixelShader(&m_PixelShader, "shader\\unlitTexturePS.cso");
 
 	//テクスチャの作成
 	TexMetadata metadata{};
 	ScratchImage image{};
-	LoadFromWICFile(TextureName, WIC_FLAGS_NONE, &metadata, image);
-	CreateShaderResourceView(Renderer::GetDevice(), image.GetImages(), image.GetImageCount(), metadata, &m_Texture);
+	m_Texture = nullptr;
+	HRESULT hr = LoadFromWICFile(TextureName, WIC_FLAGS_NONE, &metadata, image);
+	if (SUCCEEDED(hr))
+	{
+		hr = CreateShaderResourceView(Renderer::GetDevice(), image.GetImages(), image.GetImageCount(), metadata, &m_Texture);
+	}
+	if (FAILED(hr))
+	{
+		// STEP12: image1.png failed to load/convert -- leaving m_Texture as
+		// garbage here used to hand the GPU driver a wild pointer via
+		// PSSetShaderResources in Draw(), which is exactly the kind of bug
+		// that crashes deep inside nvwgf2umx.dll instead of failing cleanly.
+		// Draw() below now skips binding/drawing entirely when this is null.
+		m_Texture = nullptr;
+		char buf[256];
+		sprintf_s(buf, "[Polygon2D] texture load FAILED (hr=0x%08X) -- this Polygon2D will not draw.\n", (unsigned int)hr);
+		OutputDebugStringA(buf);
+	}
 }
 
 void Polygon2D::Uninit()
 {
-	m_VertexBuffer->Release();
-	m_VertexLayout->Release();
-	m_VertexShader->Release();
-	m_PixelShader->Release();
-	m_Texture->Release();
+	if (m_VertexBuffer) m_VertexBuffer->Release();
+	if (m_VertexLayout) m_VertexLayout->Release();
+	if (m_VertexShader) m_VertexShader->Release();
+	if (m_PixelShader) m_PixelShader->Release();
+	if (m_Texture) m_Texture->Release();
 }
 
 void Polygon2D::Update()
@@ -86,6 +102,8 @@ void Polygon2D::Update()
 
 void Polygon2D::Draw()
 {
+	if (!m_Texture) return; // STEP12: texture failed to load in Init() -- nothing safe to draw
+
 	Renderer::GetDeviceContext()->IASetInputLayout(m_VertexLayout);
 
 	Renderer::GetDeviceContext()->VSSetShader(m_VertexShader, NULL, 0);

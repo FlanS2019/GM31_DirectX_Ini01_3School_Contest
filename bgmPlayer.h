@@ -11,14 +11,14 @@ public:
 	void Init() override
 	{
 		m_Bgm = AddComponent<Audio>();
-		m_Bgm->Load("audio\\BGM\\bgm.wav");
+		m_Bgm->Load("audio\\BGM\\abandoned_hospital.mp3");
 		m_Bgm->Play(true); // ループ再生
 	}
 	void Uninit() override
 	{
 		if (m_Bgm)
 		{
-			m_Bgm->Uninit();  // ← これを追加：SourceVoiceのStop/Destroy
+			m_Bgm->Uninit();  // ← ここ追加：SourceVoiceをStop/Destroy
 		}
 	}
 	void Update() override {}

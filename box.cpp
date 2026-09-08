@@ -57,8 +57,17 @@ void Box::Draw()
 	// the box's CENTER and GetScale() as its half-extent on every axis. So
 	// shift the draw down by m_Scale.y to line the visible mesh up with
 	// that center, instead of changing the position/collision convention.
+	//
+	// STEP10: draws m_Scale/m_Position directly again, with NO separate
+	// visual-only thinning -- the previous pass thinned the mesh here in
+	// Draw() while leaving collision (m_Scale) at the old full-cell size,
+	// which meant Player.cpp's collision box no longer matched what was
+	// drawn (walls looked thin but still blocked movement like the old
+	// thick shape). The thinning now happens once, in Map.cpp, directly on
+	// the wall's actual SetPosition()/SetScale() at placement time -- so
+	// whatever this draws IS the collision box, always in sync.
 	XMMATRIX world, scale, rot, trans;
-	scale = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z); // scale factor
+	scale = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z);
 	rot = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y, m_Rotation.z);
 	trans = XMMatrixTranslation(m_Position.x, m_Position.y - m_Scale.y, m_Position.z);
 	world = scale * rot * trans;

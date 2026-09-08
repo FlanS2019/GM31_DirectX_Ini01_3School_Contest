@@ -5,19 +5,30 @@
 #include "camera.h"
 #include "Input.h"
 #include "hud.h"
+#include "player.h"
 #include <cstdio>
+#include <cstring>
 
 namespace
 {
 	// SPEC doesn't give a distance; matches Door's original hand-tuned range.
 	const float kMaxInteractDistance = 4.0f;
 
+	// STEP12: persistent inventory panel (bottom-left) -- ids match
+	// Map.cpp's SetItemId()/SetDisplayName() calls for 'P'/'R'/'M'.
+	struct InventoryEntry { int KeyId; const char* Name; };
+	const InventoryEntry kInventoryItems[] =
+	{
+		{ 1, "古い写真" },
+		{ 2, "診療記録" },
+		{ 3, "金属部品" },
+	};
+	const int kInventoryItemCount = 3;
+
 	// Standard slab (ray-vs-AABB) test. box given as world-space min/max
 	// corners -- the same "GetPosition()=center, GetScale()=half-extent"
 	// convention Box/Door/Map.cpp/Player.cpp's collision already use, so
-	// this works unchanged for every Interactable in the game. Written out
-	// per-axis rather than as a loop over Vector3 as float[3] -- Vector3
-	// isn't guaranteed contiguous, and this is only 3 axes anyway.
+	// this works unchanged for every Interactable in the game.
 	bool RayIntersectsAABB(const Vector3& origin, const Vector3& dir,
 		const Vector3& boxMin, const Vector3& boxMax, float maxDist, float& outDist)
 	{
@@ -77,9 +88,6 @@ namespace
 	}
 
 	// World -> screen-pixel projection for the floating prompt label.
-	// Hand-written instead of XMVector3Project because that helper wants a
-	// D3D11_VIEWPORT on hand, which Interact doesn't keep around --
-	// SCREEN_WIDTH/HEIGHT from main.h is all this actually needs.
 	bool WorldToScreen(const Vector3& worldPos, const XMMATRIX& view, const XMMATRIX& projection,
 		float& outX, float& outY)
 	{
@@ -98,6 +106,9 @@ namespace
 	}
 }
 
+char Interact::s_WarningText[128] = {};
+float Interact::s_WarningTimer = 0.0f;
+
 Interactable* Interact::FindTarget()
 {
 	Camera* camera = Manager::GetGameObject<Camera>();
@@ -114,8 +125,6 @@ Interactable* Interact::FindTarget()
 	{
 		if (!candidate->CanInteract()) continue;
 
-		// Every Interactable in this game is also a GameObject (see
-		// interactable.h) -- cross-cast back to read its position/extent.
 		GameObject* gameObject = dynamic_cast<GameObject*>(candidate);
 		if (!gameObject) continue;
 
@@ -133,31 +142,45 @@ Interactable* Interact::FindTarget()
 		}
 	}
 
-	// Kept alongside m_Target so Draw() below has a world position to
-	// project, without redoing the raycast or the dynamic_cast.
 	m_TargetObject = bestObject;
 	return best;
 }
 
+void Interact::ApplyTarget(Interactable* newTarget)
+{
+	if (newTarget == m_Target) return;
+
+	char buf[128];
+	if (newTarget)
+		sprintf_s(buf, "[Interact] target: %s\n", newTarget->GetInteractText());
+	else
+		sprintf_s(buf, "[Interact] target: (none)\n");
+	OutputDebugStringA(buf);
+
+	m_Target = newTarget;
+}
+
+void Interact::ShowWarning(const char* text, float seconds)
+{
+	if (!text) return;
+	strcpy_s(s_WarningText, text);
+	s_WarningTimer = seconds;
+}
+
 void Interact::Update()
 {
-	Interactable* newTarget = FindTarget();
-
-	if (newTarget != m_Target)
+	if (s_WarningTimer > 0.0f)
 	{
-		char buf[128];
-		if (newTarget)
-			sprintf_s(buf, "[Interact] target: %s\n", newTarget->GetInteractText());
-		else
-			sprintf_s(buf, "[Interact] target: (none)\n");
-		OutputDebugStringA(buf);
-
-		m_Target = newTarget;
+		s_WarningTimer -= 1.0f / 60.0f;
+		if (s_WarningTimer < 0.0f) s_WarningTimer = 0.0f;
 	}
+
+	ApplyTarget(FindTarget());
 
 	if (m_Target && Input::GetKeyTrigger('E'))
 	{
 		m_Target->Interact();
+		ApplyTarget(FindTarget());
 	}
 }
 
@@ -168,30 +191,64 @@ const char* Interact::GetPromptText() const
 
 void Interact::Draw()
 {
-	if (!m_Target || !m_TargetObject) return;
+	bool hasPrompt = false;
+	float promptX = 0.0f, promptY = 0.0f;
 
-	Camera* camera = Manager::GetGameObject<Camera>();
-	if (!camera) return;
+	if (m_Target && m_TargetObject)
+	{
+		Camera* camera = Manager::GetGameObject<Camera>();
+		if (camera)
+		{
+			Vector3 labelPos = m_TargetObject->GetPosition();
+			labelPos.y += m_TargetObject->GetScale().y + 0.35f;
 
-	// Float the label just above the target's box (its own half-height
-	// plus a little clearance) instead of at its center, so it reads as a
-	// label on the door/switch/etc. rather than text buried mid-slab --
-	// this is the "ドア付近に" placement, as opposed to a screen-center
-	// HUD prompt.
-	Vector3 labelPos = m_TargetObject->GetPosition();
-	labelPos.y += m_TargetObject->GetScale().y + 0.35f;
+			if (WorldToScreen(labelPos, camera->GetViewMatrix(), camera->GetProjectionMatrix(), promptX, promptY)
+				&& promptX >= 0.0f && promptX <= SCREEN_WIDTH
+				&& promptY >= 0.0f && promptY <= SCREEN_HEIGHT)
+			{
+				hasPrompt = true;
+			}
+		}
+	}
 
-	float screenX, screenY;
-	if (!WorldToScreen(labelPos, camera->GetViewMatrix(), camera->GetProjectionMatrix(), screenX, screenY))
-		return;
+	bool hasWarning = s_WarningTimer > 0.0f;
 
-	// Off-screen (target's box is in raycast range/angle but its label
-	// point landed outside the window, e.g. near a screen edge) -- don't
-	// draw a label floating off the visible area.
-	if (screenX < 0.0f || screenX > SCREEN_WIDTH || screenY < 0.0f || screenY > SCREEN_HEIGHT)
-		return;
+	// STEP12: the inventory panel below is now always drawn (SPEC asked for a
+	// persistent frame -- "枠組み" -- so this early-return, which used to skip
+	// Hud::Begin()/End() entirely whenever there was no prompt/warning, is gone.
 
 	Hud::Begin();
-	Hud::DrawText(GetPromptText(), screenX, screenY, 22.0f, true);
+
+	{
+		const float headerHeight = 30.0f;
+		const float lineHeight = 26.0f;
+		const float panelWidth = 220.0f;
+		const float panelHeight = headerHeight + kInventoryItemCount * lineHeight + 10.0f;
+		const float panelX = 20.0f;
+		const float panelY = SCREEN_HEIGHT - panelHeight - 20.0f;
+
+		Hud::DrawPanel(panelX, panelY, panelWidth, panelHeight);
+		Hud::DrawText("アイテム", panelX + 12.0f, panelY + 8.0f, 18.0f, false);
+
+		Player* player = Manager::GetGameObject<Player>();
+		for (int i = 0; i < kInventoryItemCount; i++)
+		{
+			bool has = player && player->HasKey(kInventoryItems[i].KeyId);
+			char line[128];
+			sprintf_s(line, "%s %s", has ? "[x]" : "[ ]", kInventoryItems[i].Name);
+			Hud::DrawText(line, panelX + 12.0f, panelY + headerHeight + i * lineHeight, 16.0f, false);
+		}
+	}
+
+	if (hasPrompt)
+	{
+		Hud::DrawText(GetPromptText(), promptX, promptY, 22.0f, true);
+	}
+
+	if (hasWarning)
+	{
+		Hud::DrawText(s_WarningText, SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT - 90.0f, 24.0f, true);
+	}
+
 	Hud::End();
 }
