@@ -139,22 +139,22 @@ void Player::Update()
 
 	if (grounded)
 	{
-		m_Position.y = 0.0f;
-		if (Input::GetKeyTrigger(VK_SPACE))
-		{
-			m_Velocity.y = jumpImpulse;
+		//m_Position.y = 0.0f;
+		//if (Input::GetKeyTrigger(VK_SPACE))
+		//{
+		//	m_Velocity.y = jumpImpulse;
 
-			m_Scale.x = 1.0f;
-			m_Scale.y = 1.5f;
-			m_Scale.z = 1.0f;
-		}
-		else
-		{
-			m_Scale.x = 1.0f;
-			m_Scale.y = 1.0f;
-			m_Scale.z = 1.0f;
+		//	m_Scale.x = 1.0f;
+		//	m_Scale.y = 1.5f;
+		//	m_Scale.z = 1.0f;
+		//}
+		//else
+		//{
+		//	m_Scale.x = 1.0f;
+		//	m_Scale.y = 1.0f;
+		//	m_Scale.z = 1.0f;
 
-		}
+		//}
 
 		if (!oldGround && m_Grounded)
 		{
@@ -258,11 +258,6 @@ void Player::Update()
 			Vector3 boxPosition = box->GetPosition();
 			Vector3 boxScale = box->GetScale();
 
-			// A wall's bottom is exactly at Y=0 (boxPosition.y - boxScale.y,
-			// with WALL_HEIGHT/2 for both), and the player's grounded Y is
-			// forced to exactly 0.0f every frame by the floor-collision code
-			// above. "0.0 < 0.0" is always false, so without this margin the
-			// Y check never overlaps while grounded.
 			const float skin = 0.05f;
 			if (boxPosition.x - boxScale.x - skin < m_Position.x && m_Position.x < boxPosition.x + boxScale.x + skin &&
 				boxPosition.y - boxScale.y - skin < m_Position.y && m_Position.y < boxPosition.y + boxScale.y + skin &&
@@ -289,10 +284,6 @@ void Player::Update()
 			break; // nothing overlapping this pass -- fully resolved
 		}
 
-		// push out a bit further than the exact boundary. The camera sits
-		// at the player's XZ position, and pushing to exactly touching
-		// (distance 0) leaves the wall surface closer than the 0.1 near-clip
-		// plane the instant you look straight at it.
 		const float pushClearance = 0.3f;
 
 		// --- DEBUG: print exactly what this collision event did, with a
@@ -343,13 +334,6 @@ void Player::Update()
 		}
 	}
 
-	// --- DEBUG: flag any single-frame move bigger than what's physically
-	// possible (max speed is 5, x2 sprinting = 10 units/sec, so at 60fps a
-	// legit frame moves at most ~0.17 units before collision response).
-	// Anything much larger than that in one frame is a teleport, not
-	// walking -- if this fires right when the walls vanish in-game, the
-	// [COLLIDE] / [SUSPICIOUS PUSH] lines just above it are the ones that
-	// caused it.
 	{
 		Vector3 debugDelta = m_Position - debugPosBeforeMove;
 		float debugJump = debugDelta.length();
