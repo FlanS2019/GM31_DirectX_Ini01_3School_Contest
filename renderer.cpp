@@ -18,7 +18,9 @@ ID3D11Buffer*			Renderer::m_ViewBuffer{};
 ID3D11Buffer*			Renderer::m_ProjectionBuffer{};
 ID3D11Buffer*			Renderer::m_MaterialBuffer{};
 ID3D11Buffer*			Renderer::m_LightBuffer{};
-
+ID3D11Buffer* Renderer::m_PointLightBuffer{};
+POINT_LIGHT				Renderer::m_PendingPointLights[MAX_POINT_LIGHTS]{};
+int						Renderer::m_PendingPointLightCount = 0;
 
 ID3D11DepthStencilState* Renderer::m_DepthStateEnable{};
 ID3D11DepthStencilState* Renderer::m_DepthStateDisable{};
@@ -98,10 +100,6 @@ void Renderer::Init()
 
 	m_DeviceContext->OMSetRenderTargets(1, &m_RenderTargetView, m_DepthStencilView);
 
-
-
-
-
 	// ビューポート設定
 	D3D11_VIEWPORT viewport;
 	viewport.Width = (FLOAT)SCREEN_WIDTH;
@@ -165,9 +163,6 @@ void Renderer::Init()
 
 	m_DeviceContext->OMSetDepthStencilState( m_DepthStateEnable, NULL );
 
-
-
-
 	// サンプラーステート設定
 	D3D11_SAMPLER_DESC samplerDesc{};
 	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
@@ -181,8 +176,6 @@ void Renderer::Init()
 	m_Device->CreateSamplerState( &samplerDesc, &samplerState );
 
 	m_DeviceContext->PSSetSamplers( 0, 1, &samplerState );
-
-
 
 	// 定数バッファ生成
 	D3D11_BUFFER_DESC bufferDesc{};
@@ -215,10 +208,11 @@ void Renderer::Init()
 	m_Device->CreateBuffer( &bufferDesc, NULL, &m_LightBuffer );
 	m_DeviceContext->VSSetConstantBuffers( 4, 1, &m_LightBuffer );
 	m_DeviceContext->PSSetConstantBuffers( 4, 1, &m_LightBuffer );
+	bufferDesc.ByteWidth = sizeof(POINT_LIGHT) * MAX_POINT_LIGHTS + 16; // 配列 + (int Count + float3 Pad)
 
-
-
-
+	m_Device->CreateBuffer(&bufferDesc, NULL, &m_PointLightBuffer);
+	m_DeviceContext->VSSetConstantBuffers(6, 1, &m_PointLightBuffer);
+	m_DeviceContext->PSSetConstantBuffers(6, 1, &m_PointLightBuffer);
 
 	// ライト初期化
 	LIGHT light{};
@@ -250,7 +244,7 @@ void Renderer::Uninit()
 	m_ProjectionBuffer->Release();
 	m_LightBuffer->Release();
 	m_MaterialBuffer->Release();
-
+	m_PointLightBuffer->Release();
 
 	m_DeviceContext->ClearState();
 	m_RenderTargetView->Release();
@@ -266,10 +260,25 @@ void Renderer::Uninit()
 void Renderer::Begin()
 {
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	m_DeviceContext->ClearRenderTargetView( m_RenderTargetView, clearColor );
-	m_DeviceContext->ClearDepthStencilView( m_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-}
+	m_DeviceContext->ClearRenderTargetView(m_RenderTargetView, clearColor);
+	m_DeviceContext->ClearDepthStencilView(m_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
+	struct POINT_LIGHT_BUFFER
+	{
+		POINT_LIGHT Lights[MAX_POINT_LIGHTS];
+		int Count;
+		XMFLOAT3 Pad;
+	};
+
+	POINT_LIGHT_BUFFER buf{};
+	for (int i = 0; i < m_PendingPointLightCount; i++)
+		buf.Lights[i] = m_PendingPointLights[i];
+	buf.Count = m_PendingPointLightCount;
+
+	m_DeviceContext->UpdateSubresource(m_PointLightBuffer, 0, NULL, &buf, 0, 0);
+
+	m_PendingPointLightCount = 0;
+}
 
 
 void Renderer::End()
@@ -345,6 +354,18 @@ void Renderer::SetMaterial( MATERIAL Material )
 void Renderer::SetLight( LIGHT Light )
 {
 	m_DeviceContext->UpdateSubresource(m_LightBuffer, 0, NULL, &Light, 0, 0);
+}
+
+void Renderer::AddPointLight(XMFLOAT3 position, XMFLOAT3 color, float range)
+{
+	if (m_PendingPointLightCount >= MAX_POINT_LIGHTS)
+		return; // 上限超えたら黙って無視(蛍光灯を増やしすぎた時の保険)
+
+	POINT_LIGHT& light = m_PendingPointLights[m_PendingPointLightCount];
+	light.Position = XMFLOAT4(position.x, position.y, position.z, 1.0f);
+	light.Color = XMFLOAT4(color.x, color.y, color.z, 1.0f);
+	light.Params = XMFLOAT4(range, 0.0f, 0.0f, 0.0f);
+	m_PendingPointLightCount++;
 }
 
 void Renderer::CreateVertexShader( ID3D11VertexShader** VertexShader, ID3D11InputLayout** VertexLayout, const char* FileName )

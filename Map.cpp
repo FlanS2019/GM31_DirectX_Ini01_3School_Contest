@@ -20,17 +20,8 @@ namespace
 	const float WALL_HEIGHT = 3.0f;
 	const float CEILING_THICKNESS = 0.2f; // STEP10: how thick the ceiling slab reads as, purely cosmetic
 
-	// STEP10: how thin a wall's OPEN-facing side recedes -- see PlaceWall()
-	// below. 1.0 = the original full-cube look (no shrink); lower = thinner.
-	// Doors are NOT thinned by this (see PlaceWall()'s comment), only plain
-	// '#' walls.
 	const float WALL_THICKNESS_SCALE = 0.3f;
 
-	// STEP13: X (switch) moved from room N into room A (against its west
-	// wall) and F (item box) moved from room N into room B -- room N used
-	// to hold P/X/F all at once while A only had the key and C only had
-	// one item, so items/gimmicks read as "scattered" now instead of piled
-	// into a single room.
 	const char* g_Grid[ROWS] =
 	{
 		"############",
@@ -111,20 +102,10 @@ namespace
 		wall->SetScale({ halfX, WALL_HEIGHT / 2.0f, halfZ });
 	}
 
-	void SpawnLightFixture(const Vector3& position, float yRotation, bool isLit)
+	void SpawnLightFixture(const Vector3& position, float yRotation, bool isLit, bool flicker = false)
 	{
 		const float kFaceDownPitch = XM_PIDIV2;
-
-		// kTubeDrop = 0.12 -- confirmed working in-game (measured from
-		// LightCase's own vertex bounds; its local origin sits at the
-		// housing's back, not its center).
 		const float kTubeDrop = 0.12f;
-
-		// Two tubes side by side, offset perpendicular to the tube's own
-		// length. That direction is local Y before rotation, which becomes
-		// world Z at yRotation=0 or world X at yRotation=XM_PIDIV2 -- see
-		// sideOffset below. Kept well inside the case's own local-Y half
-		// width (~0.138) so both tubes stay under the housing.
 		const float kTubeSideOffset = 0.05f;
 
 		LightCase* lightCase = Manager::AddGameObject<LightCase>();
@@ -132,7 +113,7 @@ namespace
 		lightCase->SetRotation({ kFaceDownPitch, yRotation, 0.0f });
 
 		if (!isLit)
-			return; // dead fixture -- empty housing only, no tube inside
+			return;
 
 		Vector3 sideOffset(kTubeSideOffset * sinf(yRotation), 0.0f, kTubeSideOffset * cosf(yRotation));
 
@@ -146,13 +127,41 @@ namespace
 				position.y - kTubeDrop,
 				position.z + side * sideOffset.z });
 			lightTube->SetRotation({ kFaceDownPitch, yRotation, 0.0f });
+			lightTube->SetFlicker(flicker);
 		}
 	}
 
-	// STEP13: one ambient dust-mote emitter at a room's center -- see
-	// Particle::SetAmbientMode(). radius/height are sized to roughly cover
-	// a 3x3-cell room (this map's rooms are all that size); count is kept
-	// modest since every room gets its own emitter and draw cost adds up.
+	// 管が半分外れて斜めに垂れ下がってる状態。管1本だけ、余分に傾けて低め
+	// に垂らしてて、常にチカチカさせる(外れかけの管が安定して光り続ける
+	// のは不自然なので)。1本だけ完全に「光らない」固定にするには非発光の
+	// 別素材が要る(共有マテリアルの都合)ので、それは床落ち管をやる時に
+	// 改めて検討する。
+	void SpawnDisplacedTube(const Vector3& position, float yRotation)
+	{
+		const float kFaceDownPitch = XM_PIDIV2;
+		const float kTubeDrop = 0.12f;
+		const float kExtraDrop = 0.15f;
+		const float kExtraTilt = 0.5f;
+
+		LightCase* lightCase = Manager::AddGameObject<LightCase>();
+		lightCase->SetPosition(position);
+		lightCase->SetRotation({ kFaceDownPitch, yRotation, 0.0f });
+
+		LightTube* lightTube = Manager::AddGameObject<LightTube>();
+		lightTube->SetPosition({ position.x, position.y - kTubeDrop - kExtraDrop, position.z });
+		lightTube->SetRotation({ kFaceDownPitch + kExtraTilt, yRotation, kExtraTilt });
+		lightTube->SetFlicker(true);
+	}
+
+	// 部屋ごとの配置パターン: 3x3マスの部屋に3個(左上・右上・下中央)、
+// 2点灯+1消灯。(colBase, rowBase)はその部屋の左上マスの座標。
+	void SpawnRoomLights(int colBase, int rowBase)
+	{
+		SpawnLightFixture(CellCenter(colBase, rowBase) + Vector3(0.0f, WALL_HEIGHT - 0.05f, 0.0f), XM_PIDIV2, true, true);  // チカチカ
+		SpawnLightFixture(CellCenter(colBase + 2, rowBase) + Vector3(0.0f, WALL_HEIGHT - 0.05f, 0.0f), XM_PIDIV2, true, false); // 安定点灯
+		SpawnLightFixture(CellCenter(colBase + 1, rowBase + 2) + Vector3(0.0f, WALL_HEIGHT - 0.05f, 0.0f), XM_PIDIV2, false);        // 消灯
+	}
+
 	void SpawnDustMotes(const Vector3& roomCenter)
 	{
 		Particle* dust = Manager::AddGameObject<Particle>();
@@ -269,13 +278,6 @@ void Map::Init()
 		}
 	}
 
-	// STEP10: a thin ceiling slab over every cell (walls included -- their
-	// tops sit exactly at WALL_HEIGHT, flush with the ceiling's underside,
-	// so covering wall cells too is harmless and keeps this one simple
-	// loop). One Box per cell rather than a single map-spanning slab so
-	// box.mtl's texture tiles once per cell like the walls do, instead of
-	// stretching across the whole ceiling. Not blocking (SetBlocking(false))
-	// -- see box.h's SetBlocking() comment.
 	for (int row = 0; row < ROWS; row++)
 	{
 		for (int col = 0; col < COLS; col++)
@@ -292,10 +294,32 @@ void Map::Init()
 	// loop is the one place to fix it.
 	// 各部屋1個ずつ(SpawnDustMotesと同じ4部屋の中心を再利用)。isLitで
 	// 点灯/消灯を部屋ごとに指定 -- 自由に true/false を入れ替えてOK。
-	SpawnLightFixture(CellCenter(2, 2) + Vector3(0.0f, WALL_HEIGHT - 0.05f, 0.0f), XM_PIDIV2, true);  // room A
-	SpawnLightFixture(CellCenter(2, 6) + Vector3(0.0f, WALL_HEIGHT - 0.05f, 0.0f), XM_PIDIV2, false); // room B (消灯)
-	SpawnLightFixture(CellCenter(9, 2) + Vector3(0.0f, WALL_HEIGHT - 0.05f, 0.0f), XM_PIDIV2, true);  // room C
-	SpawnLightFixture(CellCenter(9, 6) + Vector3(0.0f, WALL_HEIGHT - 0.05f, 0.0f), XM_PIDIV2, false); // room N (消灯)
+	SpawnRoomLights(1, 1); // room A
+	SpawnRoomLights(1, 5); // room B
+	SpawnRoomLights(8, 1); // room C
+	SpawnRoomLights(8, 5); // room N
+
+	for (int row = 0; row < ROWS; row++)
+	{
+		for (int col = 0; col < COLS; col++)
+		{
+			if (!IsOpenFloor(row, col)) continue;
+			if ((row + col) % 2 != 0) continue;
+
+			bool northSouthOpen = IsOpenFloor(row - 1, col) || IsOpenFloor(row + 1, col);
+			bool eastWestOpen = IsOpenFloor(row, col - 1) || IsOpenFloor(row, col + 1);
+			float yRotation = (eastWestOpen && !northSouthOpen) ? 0.0f : XM_PIDIV2;
+			Vector3 fixturePos = CellCenter(col, row) + Vector3(0.0f, WALL_HEIGHT - 0.05f, 0.0f);
+
+			int pattern = (row * COLS + col) % 3;
+			if (pattern == 0)
+				SpawnLightFixture(fixturePos, yRotation, false);       // 消灯
+			else if (pattern == 1)
+				SpawnDisplacedTube(fixturePos, yRotation);             // 外れかけ
+			else
+				SpawnLightFixture(fixturePos, yRotation, true);        // 通常点灯
+		}
+	}
 
 	SpawnDustMotes(CellCenter(2, 2)); // room A
 	SpawnDustMotes(CellCenter(2, 6)); // room B

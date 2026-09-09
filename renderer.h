@@ -1,5 +1,7 @@
 #pragma once
 
+#define MAX_POINT_LIGHTS 16
+
 struct VERTEX_3D
 {
 	XMFLOAT3 Position;
@@ -33,6 +35,12 @@ struct LIGHT
 	XMFLOAT4	SpotParams; // x = cos(inner cone), y = cos(outer cone), z = range, w unused
 };
 
+struct POINT_LIGHT
+{
+	XMFLOAT4 Position;
+	XMFLOAT4 Color;
+	XMFLOAT4 Params; // x = range
+};
 
 class Renderer
 {
@@ -51,6 +59,9 @@ private:
 	static ID3D11Buffer*			m_ProjectionBuffer;
 	static ID3D11Buffer*			m_MaterialBuffer;
 	static ID3D11Buffer*			m_LightBuffer;
+	static ID3D11Buffer* m_PointLightBuffer;
+	static POINT_LIGHT				m_PendingPointLights[MAX_POINT_LIGHTS];
+	static int						m_PendingPointLightCount;
 
 
 	static ID3D11DepthStencilState* m_DepthStateEnable;
@@ -75,6 +86,7 @@ public:
 	static void SetProjectionMatrix(XMMATRIX ProjectionMatrix);
 	static void SetMaterial(MATERIAL Material);
 	static void SetLight(LIGHT Light);
+	static void AddPointLight(XMFLOAT3 position, XMFLOAT3 color, float range);
 
 	static ID3D11Device* GetDevice( void ){ return m_Device; }
 	static ID3D11DeviceContext* GetDeviceContext( void ){ return m_DeviceContext; }

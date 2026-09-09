@@ -52,6 +52,22 @@ cbuffer LightBuffer : register(b4)
 	LIGHT Light;
 }
 
+#define MAX_POINT_LIGHTS 16
+
+struct POINT_LIGHT
+{
+    float4 Position; // ワールド座標(xyz)
+    float4 Color; // rgb = 色×強さ
+    float4 Params; // x = 届く範囲(range)
+};
+
+cbuffer PointLightBuffer : register(b6)
+{
+    POINT_LIGHT PointLights[MAX_POINT_LIGHTS];
+    int PointLightCount;
+    float3 PointLightPad;
+}
+
 struct VS_IN
 {
 	float4 Position		: POSITION0;

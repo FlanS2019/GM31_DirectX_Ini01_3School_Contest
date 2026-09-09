@@ -54,5 +54,16 @@ void main(in PS_IN In, out float4 outDiffuse : SV_Target)
         lit = baseColor.rgb * (Light.Ambient.rgb + Light.Diffuse.rgb * diffuseTerm);
     }
 
+    for (int i = 0; i < PointLightCount; i++)
+    {
+        float3 toPL = PointLights[i].Position.xyz - In.WorldPos;
+        float distPL = length(toPL);
+        float rangePL = max(PointLights[i].Params.x, 0.0001);
+        float3 Lp = toPL / max(distPL, 0.0001);
+        float NdotLp = saturate(dot(N, Lp));
+        float attenPL = saturate(1.0 - distPL / rangePL);
+        attenPL *= attenPL;
+        lit += baseColor.rgb * PointLights[i].Color.rgb * NdotLp * attenPL;
+    }
     outDiffuse = float4(lit + Material.Emission.rgb, baseColor.a);
 }
