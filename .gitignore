@@ -365,3 +365,5 @@ FodyWeavers.xsd
 FodyWeavers.xsd !model/**/*.obj
 !model/**/*.obj
 /debug_log.txt
+/debug_log.txt
+debug_log.txt
