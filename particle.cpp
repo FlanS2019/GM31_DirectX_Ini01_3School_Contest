@@ -66,9 +66,62 @@ void Particle::Uninit()
 	m_Texture->Release(); /* テクスチャの解放。 */
 }
 
+void Particle::SetAmbientMode(float radius, float height, int count)
+{
+	m_AmbientMode = true;
+	m_SpawnRadius = radius;
+	m_SpawnHeight = height;
+	m_AmbientCount = (count < MAX_PARTICLES) ? count : MAX_PARTICLES;
+}
+
 void Particle::Update()
 {
 	float dt = 1.0f / 60.0f;
+
+	// STEP13: ambient floating-dust mode -- no gravity, no one-shot burst.
+	// Keeps m_AmbientCount motes alive at all times, each just drifting
+	// slowly upward inside the box and quietly resetting to the bottom
+	// once it drifts above m_SpawnHeight, instead of falling/expiring like
+	// the explosion-burst particles below.
+	if (m_AmbientMode)
+	{
+		for (int i = 0; i < m_AmbientCount; i++)
+		{
+			if (m_Particle[i].Enable == false)
+			{
+				m_Particle[i].Enable = true;
+				m_Particle[i].Life = 9999; // effectively permanent -- recycled by height, not lifetime
+				m_Particle[i].Position = m_Position + Vector3(
+					((float)rand() / RAND_MAX - 0.5f) * m_SpawnRadius * 2.0f,
+					(float)rand() / RAND_MAX * m_SpawnHeight,
+					((float)rand() / RAND_MAX - 0.5f) * m_SpawnRadius * 2.0f);
+
+				m_Particle[i].Velocity.x = ((float)rand() / RAND_MAX - 0.5f) * 0.15f;
+				m_Particle[i].Velocity.y = (float)rand() / RAND_MAX * 0.10f + 0.02f;
+				m_Particle[i].Velocity.z = ((float)rand() / RAND_MAX - 0.5f) * 0.15f;
+			}
+		}
+
+		for (int i = 0; i < m_AmbientCount; i++)
+		{
+			if (m_Particle[i].Enable == true)
+			{
+				m_Particle[i].Position += m_Particle[i].Velocity * dt;
+
+				if (m_Particle[i].Position.y > m_Position.y + m_SpawnHeight)
+				{
+					// drifted out the top -- recycle back near the floor with a
+					// fresh random XZ so it doesn't look like it teleports in a line
+					m_Particle[i].Position.x = m_Position.x + ((float)rand() / RAND_MAX - 0.5f) * m_SpawnRadius * 2.0f;
+					m_Particle[i].Position.y = m_Position.y;
+					m_Particle[i].Position.z = m_Position.z + ((float)rand() / RAND_MAX - 0.5f) * m_SpawnRadius * 2.0f;
+				}
+			}
+		}
+
+		return;
+	}
+
 	int count = 30;	
 
 	for (int i = 0; i < MAX_PARTICLES; i++)

@@ -4,7 +4,7 @@
 #include <thread>
 
 const wchar_t* CLASS_NAME = L"AppClass";
-const wchar_t* WINDOW_NAME = L"abandoned hospital,0:00";
+const wchar_t* WINDOW_NAME = L"abandoned ruins,0:00"; // renamed from "abandoned hospital" -- theme changed since the available models don't read as hospital-specific
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 

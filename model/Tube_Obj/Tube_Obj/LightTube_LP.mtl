@@ -1,0 +1,22 @@
+# Hand-written -- the downloaded LightTube_LP.obj had no .mtl of its own.
+# map_Kd is the tube's normal color texture; _ARM.png/_Normal.png from the
+# same download aren't usable without shader changes (unlit + single-texture
+# shader: shader\unlitTexturePS.cso).
+#
+# STEP11: this shader is NOT actually unlit -- it multiplies the sampled
+# texture by the scene's (very dim) ambient/diffuse light, so the earlier
+# trick of pointing map_Kd at the _Em glow map just made a dim, flat image
+# instead of an actual glow. Real fix: the loader now parses Ke (emissive)
+# below and the shader adds Material.Emission on top of the lit color, so
+# the tube glows regardless of scene lighting. map_Kd is back to the normal
+# color texture.
+newmtl Tube
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 3.000000 3.000000 2.600000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Kd LightTube_LP_Color.png

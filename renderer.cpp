@@ -354,7 +354,20 @@ void Renderer::CreateVertexShader( ID3D11VertexShader** VertexShader, ID3D11Inpu
 	long int fsize;
 
 	file = fopen(FileName, "rb");
-	assert(file);
+	if (!file)
+	{
+		// STEP12: assert() alone is compiled out in Release, so a missing/
+		// misnamed .cso used to fall straight through into _fileno(NULL) and
+		// a garbage-sized new[] -- undefined behaviour that can crash deep
+		// inside the GPU driver instead of failing cleanly here.
+		char buf[512];
+		sprintf_s(buf, "[Renderer] CreateVertexShader: failed to open \"%s\"\n", FileName);
+		OutputDebugStringA(buf);
+		assert(file);
+		*VertexShader = nullptr;
+		*VertexLayout = nullptr;
+		return;
+	}
 
 	fsize = _filelength(_fileno(file));
 	unsigned char* buffer = new unsigned char[fsize];
@@ -390,7 +403,15 @@ void Renderer::CreatePixelShader( ID3D11PixelShader** PixelShader, const char* F
 	long int fsize;
 
 	file = fopen(FileName, "rb");
-	assert(file);
+	if (!file)
+	{
+		char buf[512];
+		sprintf_s(buf, "[Renderer] CreatePixelShader: failed to open \"%s\"\n", FileName);
+		OutputDebugStringA(buf);
+		assert(file);
+		*PixelShader = nullptr;
+		return;
+	}
 
 	fsize = _filelength(_fileno(file));
 	unsigned char* buffer = new unsigned char[fsize];

@@ -218,7 +218,18 @@ void ModelRenderer::LoadObj( const char *FileName, MODEL_OBJ *ModelObj )
 		if( feof( file ) != 0 )
 			break;
 
-		if( strcmp( str, "v" ) == 0 )
+		if( str[0] == '#' )
+		{
+			// STEP14: コメント行は行末まで読み飛ばす(LoadMaterialと同じ理由 -- コメント文に
+			// キーワードと同じ単語が出てくると誤動作するのを防ぐ)。
+			int cch;
+			do
+			{
+				cch = fgetc( file );
+			}
+			while( cch != '\n' && cch != '\r' && cch != EOF );
+		}
+		else if( strcmp( str, "v" ) == 0 )
 		{
 			positionNum++;
 		}
@@ -293,7 +304,17 @@ void ModelRenderer::LoadObj( const char *FileName, MODEL_OBJ *ModelObj )
 		if( feof( file ) != 0 )
 			break;
 
-		if( strcmp( str, "mtllib" ) == 0 )
+		if( str[0] == '#' )
+		{
+			// STEP14: コメント行を読み飛ばす(理由は上のカウント処理と同じ)。
+			int cch;
+			do
+			{
+				cch = fgetc( file );
+			}
+			while( cch != '\n' && cch != '\r' && cch != EOF );
+		}
+		else if( strcmp( str, "mtllib" ) == 0 )
 		{
 			//マテリアルファイル
 			fscanf( file, "%s", str );
@@ -448,7 +469,23 @@ void ModelRenderer::LoadMaterial( const char *FileName, MODEL_MATERIAL **Materia
 			break;
 
 
-		if( strcmp( str, "newmtl" ) == 0 )
+		// STEP14: コメント行("#"で始まる)は行末までまとめて読み飛ばす。
+		// この読み込みは空白区切りの1トークンずつ調べているだけなので、コメント文の中に
+		// "map_Kd"や"Ke"のような単語がそのまま出てくると本物のディレクティブと誤認して
+		// しまう(このプロジェクト自身の.mtlに書いた説明コメントで実際に発生した)。
+		// newmtlより前でこれが起きるとmcがまだ-1のままmaterialArray[mc]へ書き込むことになり、
+		// 確保前のメモリを壊すヒープ破壊バグになる -- LoadObj内のdelete[]で検出された
+		// ヒープ破壊はこれが原因だった。
+		if( str[0] == '#' )
+		{
+			int cch;
+			do
+			{
+				cch = fgetc( file );
+			}
+			while( cch != '\n' && cch != '\r' && cch != EOF );
+		}
+		else if( strcmp( str, "newmtl" ) == 0 )
 		{
 			materialNum++;
 		}
@@ -472,7 +509,17 @@ void ModelRenderer::LoadMaterial( const char *FileName, MODEL_MATERIAL **Materia
 			break;
 
 
-		if( strcmp( str, "newmtl" ) == 0 )
+		if( str[0] == '#' )
+		{
+			// STEP14: コメント行を読み飛ばす(理由は上のカウント処理と同じ)。
+			int cch;
+			do
+			{
+				cch = fgetc( file );
+			}
+			while( cch != '\n' && cch != '\r' && cch != EOF );
+		}
+		else if( strcmp( str, "newmtl" ) == 0 )
 		{
 			//マテリアル名
 			mc++;
@@ -507,6 +554,14 @@ void ModelRenderer::LoadMaterial( const char *FileName, MODEL_MATERIAL **Materia
 			fscanf( file, "%f", &materialArray[ mc ].Material.Specular.y );
 			fscanf( file, "%f", &materialArray[ mc ].Material.Specular.z );
 			materialArray[ mc ].Material.Specular.w = 1.0f;
+		}
+		else if( strcmp( str, "Ke" ) == 0 )
+		{
+			//発光色
+			fscanf( file, "%f", &materialArray[ mc ].Material.Emission.x );
+			fscanf( file, "%f", &materialArray[ mc ].Material.Emission.y );
+			fscanf( file, "%f", &materialArray[ mc ].Material.Emission.z );
+			materialArray[ mc ].Material.Emission.w = 1.0f;
 		}
 		else if( strcmp( str, "Ns" ) == 0 )
 		{

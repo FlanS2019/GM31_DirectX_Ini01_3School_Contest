@@ -1,0 +1,14 @@
+# Hand-written -- the downloaded Fluorecent_Light_Case_LP.obj had no .mtl of
+# its own. Only map_Kd (diffuse) is used; this project's shader
+# (shader\unlitTexturePS.cso) is unlit + single-texture, so _ARM.png/
+# _Normal.png from the same download aren't usable without shader changes.
+newmtl Case
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Kd Fluorecent_Light_Case_LP_Color.png

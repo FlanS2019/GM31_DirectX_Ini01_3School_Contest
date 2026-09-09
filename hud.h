@@ -11,4 +11,10 @@ public:
 
 	static void DrawText(const char* text, float x, float y,
 		float size = 22.0f, bool centered = false);
+
+	// Flat-color rounded-rect panel -- used as the persistent inventory
+	// frame at the bottom of the screen (STEP12). Independent of DrawText's
+	// per-call panel background, so it can be drawn once behind several
+	// DrawText calls instead of getting its own box per line.
+	static void DrawPanel(float x, float y, float width, float height);
 };

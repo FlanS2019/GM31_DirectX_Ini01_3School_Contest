@@ -22,20 +22,26 @@ namespace
 	bool g_Ready = false; // stays false (DrawText becomes a silent no-op) if any of the setup below fails
 }
 
+namespace
+{
+	void LogHudInitFailure(const char* step, HRESULT hr)
+	{
+		char buf[160];
+		sprintf_s(buf, "[Hud] Init FAILED at %s (hr=0x%08X) -- on-screen prompt will never draw.\n", step, (unsigned int)hr);
+		OutputDebugStringA(buf);
+	}
+}
+
 void Hud::Init()
 {
 	HRESULT hr;
 
 	hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &g_D2DFactory);
-	if (FAILED(hr)) return;
+	if (FAILED(hr)) { LogHudInitFailure("D2D1CreateFactory", hr); return; }
 
-	// Hand the swap chain's back buffer to D2D as a DXGI surface. This is
-	// exactly why renderer.cpp creates the device with
-	// D3D11_CREATE_DEVICE_BGRA_SUPPORT and the swap chain format as
-	// B8G8R8A8_UNORM -- D2D only accepts a BGRA surface here.
 	IDXGISurface* backBufferSurface = nullptr;
 	hr = Renderer::GetSwapChain()->GetBuffer(0, __uuidof(IDXGISurface), (void**)&backBufferSurface);
-	if (FAILED(hr)) return;
+	if (FAILED(hr)) { LogHudInitFailure("GetBuffer(IDXGISurface)", hr); return; }
 
 	D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties(
 		D2D1_RENDER_TARGET_TYPE_DEFAULT,
@@ -43,16 +49,16 @@ void Hud::Init()
 
 	hr = g_D2DFactory->CreateDxgiSurfaceRenderTarget(backBufferSurface, &props, &g_D2DRenderTarget);
 	backBufferSurface->Release();
-	if (FAILED(hr)) return;
+	if (FAILED(hr)) { LogHudInitFailure("CreateDxgiSurfaceRenderTarget", hr); return; }
 
 	hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&g_DWriteFactory);
-	if (FAILED(hr)) return;
+	if (FAILED(hr)) { LogHudInitFailure("DWriteCreateFactory", hr); return; }
 
 	hr = g_DWriteFactory->CreateTextFormat(
 		L"MS Gothic", nullptr,
 		DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
 		22.0f, L"ja-jp", &g_TextFormat);
-	if (FAILED(hr)) return;
+	if (FAILED(hr)) { LogHudInitFailure("CreateTextFormat", hr); return; }
 
 	g_TextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
 	g_TextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
@@ -62,6 +68,7 @@ void Hud::Init()
 	g_D2DRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black, 0.55f), &g_PanelBrush);
 
 	g_Ready = true;
+	OutputDebugStringA("[Hud] Init OK\n");
 }
 
 void Hud::Uninit()
@@ -99,11 +106,19 @@ void Hud::End()
 
 void Hud::DrawText(const char* text, float x, float y, float size, bool centered)
 {
+	if (!g_Ready)
+	{
+		static bool loggedOnce = false;
+		if (!loggedOnce)
+		{
+			OutputDebugStringA("[Hud] DrawText called but Hud is not ready (Init() failed earlier) -- nothing will draw.\n");
+			loggedOnce = true;
+		}
+		return;
+	}
+
 	if (!g_Ready || !text || !text[0]) return;
 
-	// The project's source files are Shift-JIS/ACP (see hud.h's comment),
-	// same as "E ŠJ‚¯‚é" etc. in door.h/switch.h -- convert with CP_ACP,
-	// not CP_UTF8.
 	int wlen = MultiByteToWideChar(CP_ACP, 0, text, -1, nullptr, 0);
 	if (wlen <= 0) return;
 
@@ -136,4 +151,14 @@ void Hud::DrawText(const char* text, float x, float y, float size, bool centered
 	g_D2DRenderTarget->DrawTextLayout(D2D1::Point2F(left, y), layout, g_TextBrush);
 
 	layout->Release();
+}
+
+void Hud::DrawPanel(float x, float y, float width, float height)
+{
+	if (!g_Ready) return;
+
+	D2D1_ROUNDED_RECT panel = D2D1::RoundedRect(
+		D2D1::RectF(x, y, x + width, y + height),
+		6.0f, 6.0f);
+	g_D2DRenderTarget->FillRoundedRectangle(panel, g_PanelBrush);
 }

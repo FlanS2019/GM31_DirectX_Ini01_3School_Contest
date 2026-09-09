@@ -22,7 +22,7 @@ void main(in PS_IN In, out float4 outDiffuse : SV_Target)
 
     if (!Light.Enable)
     {
-        outDiffuse = baseColor;
+        outDiffuse = float4(baseColor.rgb + Material.Emission.rgb, baseColor.a);
         return;
     }
 
@@ -54,5 +54,5 @@ void main(in PS_IN In, out float4 outDiffuse : SV_Target)
         lit = baseColor.rgb * (Light.Ambient.rgb + Light.Diffuse.rgb * diffuseTerm);
     }
 
-    outDiffuse = float4(lit, baseColor.a);
+    outDiffuse = float4(lit + Material.Emission.rgb, baseColor.a);
 }

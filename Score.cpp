@@ -51,12 +51,12 @@ void Score::Init()
     Renderer::CreateVertexShader(
         &m_VertexShader,
         &m_VertexLayout,
-        "shaderunlitTextureVS.cso"
+        "shader\\unlitTextureVS.cso"
     );
 
     Renderer::CreatePixelShader(
         &m_PixelShader,
-        "shaderunlitTexturePS.cso"
+        "shader\\unlitTexturePS.cso"
     );
 
 
