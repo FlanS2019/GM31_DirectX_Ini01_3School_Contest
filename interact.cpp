@@ -20,7 +20,7 @@ namespace
 	const InventoryEntry kInventoryItems[] =
 	{
 		{ 1, "古い写真" },
-		{ 2, "診療記録" },
+		{ 2, "色褪せた手紙" },
 		{ 3, "金属部品" },
 	};
 	const int kInventoryItemCount = 3;
