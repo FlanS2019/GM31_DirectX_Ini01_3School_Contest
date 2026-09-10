@@ -68,6 +68,15 @@ cbuffer PointLightBuffer : register(b6)
     float3 PointLightPad;
 }
 
+// UV繰り返し回数。デフォルトは(1,1)(見た目そのまま) -- 大きく引き延ばした
+// Boxが同じテクスチャを繰り返し表示できるようにするためのもの。詳細は
+// renderer.h/renderer.cppのSetUVTiling、box.cppのDraw()参照。
+cbuffer TilingBuffer : register(b7)
+{
+    float2 UVTiling;
+    float2 TilingPad;
+}
+
 struct VS_IN
 {
 	float4 Position		: POSITION0;

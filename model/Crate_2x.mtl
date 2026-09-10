@@ -1,0 +1,12 @@
+# Cleaned up placeholder -- Crate_2x.obj shipped with a "mtllib Crate_2x.mtl"
+# reference but no matching .mtl file (and no texture) was actually present
+# in the project. Replaced with a solid wood-crate-brown color instead of a
+# texture -- same fix shape as WoodenPallet_Broken2.mtl/Leather_Stool.mtl.
+
+newmtl Crate_2x
+Ka 0.180000 0.120000 0.070000
+Kd 0.500000 0.350000 0.200000
+Ks 0.080000 0.080000 0.080000
+Ke 0.000000 0.000000 0.000000
+Ns 10.000000
+d 1.000000

@@ -1,0 +1,14 @@
+# Cleaned up from assimp's FBX->OBJ export.
+# The original FBX has no embedded textures (confirmed via `assimp info`),
+# and the exported map_Kd/map_Ns/bump paths point at files that don't
+# exist in this project (and contain a space, which would break this
+# project's fscanf("%s", ...) token parser). Replaced with a solid
+# wood-brown color instead of a texture.
+
+newmtl Material
+Ka 0.150000 0.100000 0.060000
+Kd 0.450000 0.320000 0.180000
+Ks 0.050000 0.050000 0.050000
+Ke 0.000000 0.000000 0.000000
+Ns 8.000000
+d 1.000000

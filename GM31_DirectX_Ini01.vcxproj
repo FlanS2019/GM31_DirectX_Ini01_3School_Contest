@@ -145,6 +145,10 @@
     <ClCompile Include="light.cpp" />
     <ClCompile Include="lightTube.cpp" />
     <ClCompile Include="lightCase.cpp" />
+    <ClCompile Include="stool.cpp" />
+    <ClCompile Include="woodenPallet.cpp" />
+    <ClCompile Include="crate.cpp" />
+    <ClCompile Include="ivy.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="manager.cpp" />
     <ClCompile Include="Map.cpp" />
@@ -180,6 +184,10 @@
     <ClInclude Include="light.h" />
     <ClInclude Include="lightTube.h" />
     <ClInclude Include="lightCase.h" />
+    <ClInclude Include="stool.h" />
+    <ClInclude Include="woodenPallet.h" />
+    <ClInclude Include="crate.h" />
+    <ClInclude Include="ivy.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="modelRenderer.h" />
     <ClInclude Include="particle.h" />

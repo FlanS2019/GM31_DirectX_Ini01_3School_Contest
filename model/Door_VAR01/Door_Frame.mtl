@@ -1,0 +1,13 @@
+# split from Door_VAR01.obj/mtl -- the original map_Kd lines pointed at
+# Textures/*.png files that were never bundled with the download (same
+# missing-texture situation as Crate_2x/boston+ivy/WoodenPallet_Broken2/
+# Leather_Stool), so those lines are dropped and this is a plain solid
+# aged-wood color instead of stark white.
+newmtl Marco
+Ka 1.000000 1.000000 1.000000
+Kd 0.320000 0.220000 0.140000
+Ks 0.150000 0.150000 0.150000
+Ke 0.000000 0.000000 0.000000
+Ns 40.000000
+d 1.000000
+illum 2

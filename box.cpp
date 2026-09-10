@@ -74,5 +74,18 @@ void Box::Draw()
 
 	Renderer::SetWorldMatrix(world);
 
+	// box.obj's UV is baked for one small (native half-extent 1.0) cube and
+	// doesn't tile -- fine for a single cell's wall/ceiling box, but
+	// Map.cpp's SpawnMergedWalls/SpawnMergedCeiling can make this box much
+	// bigger than one cell now, which was stretching that same texture
+	// patch across the whole span instead of repeating it (the "違和感"
+	// after walls got merged). Re-tile relative to a plain, unthinned,
+	// unmerged cell's half-extent (CELL_SIZE/2 = 2.0): a single cell (half
+	// 2.0) still gets tiling 1 (today's look, unchanged), while a run
+	// merged 3 cells wide (half 6.0) now repeats the texture 3 times along
+	// its length instead of smearing it 3x. SetWorldMatrix() just reset
+	// this to (1,1) for every object, so this override only affects Box.
+	Renderer::SetUVTiling(m_Scale.x / 2.0f, m_Scale.z / 2.0f);
+
 	GameObject::Draw();
 }

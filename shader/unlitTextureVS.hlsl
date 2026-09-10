@@ -10,7 +10,7 @@ void main(in VS_IN In, out PS_IN Out)
     wvp = mul(wvp, Projection);
 
     Out.Position = mul(In.Position, wvp);
-    Out.TexCoord = In.TexCoord;
+    Out.TexCoord = In.TexCoord * UVTiling; // defaults to (1,1) -- see TilingBuffer in common.hlsl
     Out.Diffuse = In.Diffuse * Material.Diffuse;
 
     Out.WorldPos = mul(In.Position, World).xyz;

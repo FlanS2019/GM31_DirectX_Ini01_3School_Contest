@@ -1,0 +1,47 @@
+# Blender 4.0.1 MTL File: 'Door_VAR01.blend'
+# www.blender.org
+
+newmtl Hoja_derecha
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd Textures/Hoja_derecha_BaseColor.png
+map_Ns Textures/Hoja_derecha_Roughness.png
+map_Bump -bm 1.000000 Textures/Hoja_derecha_Normal.png
+
+newmtl Hoja_izquierda
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd Textures/Hoja_izquierda_BaseColor.png
+map_Ns Textures/Hoja_izquierda_Roughness.png
+map_Bump -bm 1.000000 Textures/Hoja_izquierda_Normal.png
+
+newmtl Marco
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd Textures/Marco_BaseColor.png
+map_Ns Textures/Marco_Roughness.png
+map_Bump -bm 1.000000 Textures/Marco_Normal.png
+
+newmtl Tela
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd Textures/Tela_BaseColor.png
+map_Ns Textures/Tela_Roughness.png
+map_refl Textures/Tela_Metallic.png
+map_Bump -bm 1.000000 Textures/Tela_Normal.png

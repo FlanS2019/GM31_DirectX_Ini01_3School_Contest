@@ -1,0 +1,11 @@
+# Hand-written placeholder -- same green used in the original boston_ivy.mtl's
+# wire_141007058 entry. Ivy.obj (split from boston+ivy.obj, backing box
+# removed) only ever references this one material.
+
+newmtl wire_141007058
+Ka 0.080000 0.150000 0.060000
+Kd 0.220000 0.420000 0.150000
+Ks 0.050000 0.050000 0.050000
+Ke 0.000000 0.000000 0.000000
+Ns 8.000000
+d 1.000000

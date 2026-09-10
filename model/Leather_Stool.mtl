@@ -1,0 +1,14 @@
+# Hand-written -- the downloaded Leather_Stool.obj shipped with no .mtl at
+# all (no mtllib/usemtl anywhere in the file), and no texture image either.
+# `usemtl Leather` was inserted into Leather_Stool.obj right before its face
+# list so this project's parser (which needs a usemtl to open a subset --
+# see ModelRenderer::LoadObj) has something to draw. Plain solid leather-
+# brown color, no texture.
+newmtl Leather
+Ns 40.000000
+Ka 0.120000 0.070000 0.040000
+Kd 0.360000 0.200000 0.110000
+Ks 0.100000 0.080000 0.060000
+Ke 0.000000 0.000000 0.000000
+d 1.000000
+illum 1

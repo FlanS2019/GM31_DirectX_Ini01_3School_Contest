@@ -42,6 +42,16 @@ struct POINT_LIGHT
 	XMFLOAT4 Params; // x = range
 };
 
+// How many times the diffuse texture repeats across an object's UV, instead
+// of stretching. Everything defaults to (1,1) (today's look, unchanged) --
+// see Renderer::SetWorldMatrix()/SetUVTiling() and box.cpp's Draw().
+struct UV_TILING
+{
+	float U;
+	float V;
+	float Pad[2];
+};
+
 class Renderer
 {
 private:
@@ -62,6 +72,7 @@ private:
 	static ID3D11Buffer* m_PointLightBuffer;
 	static POINT_LIGHT				m_PendingPointLights[MAX_POINT_LIGHTS];
 	static int						m_PendingPointLightCount;
+	static ID3D11Buffer*			m_TilingBuffer;
 
 
 	static ID3D11DepthStencilState* m_DepthStateEnable;
@@ -87,6 +98,7 @@ public:
 	static void SetMaterial(MATERIAL Material);
 	static void SetLight(LIGHT Light);
 	static void AddPointLight(XMFLOAT3 position, XMFLOAT3 color, float range);
+	static void SetUVTiling(float U, float V);
 
 	static ID3D11Device* GetDevice( void ){ return m_Device; }
 	static ID3D11DeviceContext* GetDeviceContext( void ){ return m_DeviceContext; }

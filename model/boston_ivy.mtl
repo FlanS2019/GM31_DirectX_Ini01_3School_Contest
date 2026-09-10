@@ -1,0 +1,24 @@
+# Hand-written placeholder -- boston+ivy.obj's own "mtllib boston ivy.mtl"
+# reference has a space in the filename, which this project's fscanf("%s",
+# ...) token parser can't read past (it would only ever capture "boston",
+# not "ivy.mtl"). Renamed the mtllib line inside the .obj to
+# "boston_ivy.mtl" (no space) and wrote this file to match. No texture/mtl
+# was actually bundled with the download either, so both materials are
+# plain solid colors instead: wire_228184153 is the backing box the ivy
+# grows on, wire_141007058 is the ivy leaves themselves.
+
+newmtl wire_228184153
+Ka 0.150000 0.140000 0.120000
+Kd 0.420000 0.380000 0.320000
+Ks 0.050000 0.050000 0.050000
+Ke 0.000000 0.000000 0.000000
+Ns 8.000000
+d 1.000000
+
+newmtl wire_141007058
+Ka 0.080000 0.150000 0.060000
+Kd 0.220000 0.420000 0.150000
+Ks 0.050000 0.050000 0.050000
+Ke 0.000000 0.000000 0.000000
+Ns 8.000000
+d 1.000000

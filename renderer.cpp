@@ -21,6 +21,7 @@ ID3D11Buffer*			Renderer::m_LightBuffer{};
 ID3D11Buffer* Renderer::m_PointLightBuffer{};
 POINT_LIGHT				Renderer::m_PendingPointLights[MAX_POINT_LIGHTS]{};
 int						Renderer::m_PendingPointLightCount = 0;
+ID3D11Buffer*			Renderer::m_TilingBuffer{};
 
 ID3D11DepthStencilState* Renderer::m_DepthStateEnable{};
 ID3D11DepthStencilState* Renderer::m_DepthStateDisable{};
@@ -214,6 +215,11 @@ void Renderer::Init()
 	m_DeviceContext->VSSetConstantBuffers(6, 1, &m_PointLightBuffer);
 	m_DeviceContext->PSSetConstantBuffers(6, 1, &m_PointLightBuffer);
 
+	bufferDesc.ByteWidth = sizeof(UV_TILING);
+
+	m_Device->CreateBuffer(&bufferDesc, NULL, &m_TilingBuffer);
+	m_DeviceContext->VSSetConstantBuffers(7, 1, &m_TilingBuffer);
+
 	// ライト初期化
 	LIGHT light{};
 	light.Enable = true;
@@ -230,6 +236,9 @@ void Renderer::Init()
 	material.Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	SetMaterial(material);
 
+	// タイリングもデフォルト(1,1)で初期化 -- box.cpp以外は常にこのまま
+	SetUVTiling(1.0f, 1.0f);
+
 	Hud::Init();
 }
 
@@ -245,6 +254,7 @@ void Renderer::Uninit()
 	m_LightBuffer->Release();
 	m_MaterialBuffer->Release();
 	m_PointLightBuffer->Release();
+	m_TilingBuffer->Release();
 
 	m_DeviceContext->ClearState();
 	m_RenderTargetView->Release();
@@ -327,6 +337,9 @@ void Renderer::SetWorldMatrix(XMMATRIX WorldMatrix)
 	XMFLOAT4X4 worldf;
 	XMStoreFloat4x4(&worldf, XMMatrixTranspose(WorldMatrix));
 	m_DeviceContext->UpdateSubresource(m_WorldBuffer, 0, NULL, &worldf, 0, 0);
+
+	// 毎回デフォルト(1,1)にリセット -- Box::Draw()だけがこの直後に上書きする
+	SetUVTiling(1.0f, 1.0f);
 }
 
 void Renderer::SetViewMatrix(XMMATRIX ViewMatrix)
@@ -349,6 +362,12 @@ void Renderer::SetProjectionMatrix(XMMATRIX ProjectionMatrix)
 void Renderer::SetMaterial( MATERIAL Material )
 {
 	m_DeviceContext->UpdateSubresource( m_MaterialBuffer, 0, NULL, &Material, 0, 0 );
+}
+
+void Renderer::SetUVTiling(float U, float V)
+{
+	UV_TILING tiling{ U, V, 0.0f, 0.0f };
+	m_DeviceContext->UpdateSubresource(m_TilingBuffer, 0, NULL, &tiling, 0, 0);
 }
 
 void Renderer::SetLight( LIGHT Light )
