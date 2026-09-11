@@ -30,14 +30,12 @@ void Ivy::Draw()
 	Renderer::GetDeviceContext()->VSSetShader(m_VertexShader, NULL, 0);
 	Renderer::GetDeviceContext()->PSSetShader(m_PixelShader, NULL, 0);
 
-	// Same reasoning as Stool::Draw() -- the model's origin is already
-	// close to its base, so m_Position is used directly with no pivot
-	// shift.
-	XMMATRIX world, scale, rot, trans;
+	XMMATRIX world, scale, flip, rot, trans;
 	scale = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z);
+	flip = XMMatrixRotationRollPitchYaw(XM_PI, 0.0f, 0.0f);
 	rot = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y, m_Rotation.z);
 	trans = XMMatrixTranslation(m_Position.x, m_Position.y, m_Position.z);
-	world = scale * rot * trans;
+	world = scale * flip * rot * trans;
 
 	Renderer::SetWorldMatrix(world);
 

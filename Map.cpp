@@ -575,13 +575,18 @@ namespace
 		crate->SetRotation({ 0.0f, yRotation, 0.0f });
 	}
 
-	// 壁に貼り付けるツタの飾り(boston+ivy.obj)。wallYRotationは壁の向き
+	// 天井から垂らすツタの飾り(model\Ivy.obj)。wallYRotationは壁の向き
 	// (光源と同じ0/XM_PIDIV2の判定基準)。テクスチャが手元に無かったので
 	// こちらも単色のプレースホルダー -- ivy.h参照。
+	// STEP: 「ツタの位置を天井から垂れてるようにしてほしい」との要望で
+	// Y座標をここでWALL_HEIGHT(天井の高さ)に固定するよう変更 -- 呼び出し
+	// 側(下のposition)は今まで通りXZだけ気にすればよく、Yは無視される。
+	// 下向きに垂らす回転自体はivy.cpp側(Draw()の固定180度フリップ)で
+	// 処理している。
 	void SpawnIvy(const Vector3& position, float wallYRotation)
 	{
 		Ivy* ivy = Manager::AddGameObject<Ivy>();
-		ivy->SetPosition(position);
+		ivy->SetPosition({ position.x, WALL_HEIGHT, position.z });
 		ivy->SetRotation({ 0.0f, wallYRotation, 0.0f });
 	}
 }
