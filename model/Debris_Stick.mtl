@@ -1,0 +1,11 @@
+# procedurally generated placeholder material -- see Debris_Stick.obj
+# STEP: same fix as Stain_Dirt.mtl/Stain_Blood.mtl -- Kd bumped a bit and a
+# small Ke added so it doesn't disappear into pure black in unlit corners.
+newmtl Wood
+Ka 1.000000 1.000000 1.000000
+Kd 0.360000 0.280000 0.190000
+Ks 0.120000 0.120000 0.120000
+Ke 0.030000 0.025000 0.015000
+Ns 30.000000
+d 1.000000
+illum 2

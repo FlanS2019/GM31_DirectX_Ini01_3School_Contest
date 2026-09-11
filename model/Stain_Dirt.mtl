@@ -1,0 +1,15 @@
+# procedurally generated placeholder material -- see Stain_Dirt.obj
+# STEP: colors bumped up + a small Ke added. This shader (unlitTexturePS)
+# only ever shows Kd*(ambient+light) [+Ke] when there's no texture (Ka/Ks
+# aren't actually read by it -- see debris.cpp's comment); in unlit/dark
+# corners of the map that meant the old, too-dark Kd rendered as basically
+# black. The small Ke keeps it faintly visible as a dusty tone even with
+# zero incoming light, without looking like it's glowing.
+newmtl DirtStain
+Ka 1.000000 1.000000 1.000000
+Kd 0.320000 0.260000 0.180000
+Ks 0.050000 0.050000 0.050000
+Ke 0.050000 0.040000 0.030000
+Ns 10.000000
+d 1.000000
+illum 2

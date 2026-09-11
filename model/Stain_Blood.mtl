@@ -1,0 +1,12 @@
+# procedurally generated placeholder material -- see Stain_Blood.obj
+# STEP: same fix as Stain_Dirt.mtl -- Kd made a clearer dried-blood red
+# (was too dark to read at all) and a small Ke added so it stays visible
+# even in unlit corners instead of going pure black.
+newmtl BloodStain
+Ka 1.000000 1.000000 1.000000
+Kd 0.500000 0.050000 0.040000
+Ks 0.100000 0.100000 0.100000
+Ke 0.080000 0.010000 0.010000
+Ns 25.000000
+d 1.000000
+illum 2

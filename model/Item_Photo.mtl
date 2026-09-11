@@ -1,0 +1,23 @@
+# procedurally generated placeholder material -- see Item_Photo.obj
+# Two materials: PhotoBorder (dark aged-cardboard mount) and PhotoFace
+# (lighter sepia print inset). Kd/Ke tuned the same way as the other
+# no-texture props this session (Stain_Dirt.mtl etc.) -- this shader
+# (unlitTexturePS) only ever shows Kd*(ambient+light)+Ke when there's no
+# texture, so a small Ke keeps it visible even in the map's unlit corners.
+newmtl PhotoBorder
+Ka 1.000000 1.000000 1.000000
+Kd 0.180000 0.140000 0.100000
+Ks 0.080000 0.080000 0.080000
+Ke 0.020000 0.015000 0.010000
+Ns 15.000000
+d 1.000000
+illum 2
+
+newmtl PhotoFace
+Ka 1.000000 1.000000 1.000000
+Kd 0.620000 0.520000 0.380000
+Ks 0.060000 0.060000 0.060000
+Ke 0.050000 0.040000 0.030000
+Ns 10.000000
+d 1.000000
+illum 2

@@ -1,0 +1,13 @@
+# procedurally generated placeholder material -- see Switch_Key.obj
+# Antique brass, fitting a key/lock mechanism. Same Kd+Ke reasoning as the
+# other no-texture props this session (Stain_Dirt.mtl etc.): this shader
+# (unlitTexturePS) only ever shows Kd*(ambient+light)+Ke when there's no
+# texture, so a small Ke keeps it visible even in the map's unlit corners.
+newmtl KeyMetal
+Ka 1.000000 1.000000 1.000000
+Kd 0.550000 0.420000 0.150000
+Ks 0.350000 0.350000 0.250000
+Ke 0.040000 0.030000 0.015000
+Ns 60.000000
+d 1.000000
+illum 2

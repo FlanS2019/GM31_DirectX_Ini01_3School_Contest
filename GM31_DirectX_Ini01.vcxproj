@@ -128,6 +128,7 @@
     <ClCompile Include="box.cpp" />
     <ClCompile Include="bullet.cpp" />
     <ClCompile Include="camera.cpp" />
+    <ClCompile Include="debris.cpp" />
     <ClCompile Include="door.cpp" />
     <ClCompile Include="enemy.cpp" />
     <ClCompile Include="explosion.cpp" />
@@ -145,6 +146,8 @@
     <ClCompile Include="light.cpp" />
     <ClCompile Include="lightTube.cpp" />
     <ClCompile Include="lightCase.cpp" />
+    <ClCompile Include="stainBlood.cpp" />
+    <ClCompile Include="stainDirt.cpp" />
     <ClCompile Include="stool.cpp" />
     <ClCompile Include="woodenPallet.cpp" />
     <ClCompile Include="crate.cpp" />
@@ -167,6 +170,7 @@
     <ClInclude Include="camera.h" />
     <ClInclude Include="CameraComponen.h" />
     <ClInclude Include="component.h" />
+    <ClInclude Include="debris.h" />
     <ClInclude Include="door.h" />
     <ClInclude Include="enemy.h" />
     <ClInclude Include="explosion.h" />
@@ -184,6 +188,8 @@
     <ClInclude Include="light.h" />
     <ClInclude Include="lightTube.h" />
     <ClInclude Include="lightCase.h" />
+    <ClInclude Include="stainBlood.h" />
+    <ClInclude Include="stainDirt.h" />
     <ClInclude Include="stool.h" />
     <ClInclude Include="woodenPallet.h" />
     <ClInclude Include="crate.h" />

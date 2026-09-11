@@ -6,6 +6,26 @@
 #include "manager.h"
 #include <cstdio>
 
+namespace
+{
+	// STEP: 「拾う3つの物資のモデルを作ってほしい」との要望で追加。
+	// Map.cppのSetItemId()呼び出しは1='古い写真'/2='色あせた手紙'/
+	// 3='金属部品'で固定(P/R/Mの各caseを参照)なので、そのIDをそのまま
+	// モデルパスに変換するだけの単純な対応表。0や未知のIDはInit()が
+	// SetItemId()より前に呼ばれた直後の一瞬だけ通る値なので、その間だけ
+	// 元のkey.obj(仮モデル)にフォールバックしておく。
+	const char* GetModelPathForItemId(int id)
+	{
+		switch (id)
+		{
+		case 1: return "model\\Item_Photo.obj";
+		case 2: return "model\\Item_Letter.obj";
+		case 3: return "model\\Item_MetalPart.obj";
+		default: return "model\\key.obj";
+		}
+	}
+}
+
 void Item::Init()
 {
 	// Small and off the ground, same reasoning as Key -- doesn't read as
@@ -13,8 +33,8 @@ void Item::Init()
 	m_Scale = { 0.3f, 0.3f, 0.3f };
 	m_Position.y = 1.0f;
 
-	ModelRenderer* modelRenderer = AddComponent<ModelRenderer>();
-	modelRenderer->Load("model\\key.obj"); // placeholder art -- swap per-item once real models exist
+	m_ModelRenderer = AddComponent<ModelRenderer>();
+	m_ModelRenderer->Load(GetModelPathForItemId(m_ItemId)); // m_ItemIdはまだ既定値(0)のことが多い -- SetItemId()が呼ばれた時点で本来のモデルに差し替わる
 
 	Renderer::CreateVertexShader(&m_VertexShader, &m_VertexLayout, "shader\\unlitTextureVS.cso");
 	Renderer::CreatePixelShader(&m_PixelShader, "shader\\unlitTexturePS.cso");
@@ -39,6 +59,18 @@ const char* Item::GetInteractText()
 {
 	sprintf_s(m_PromptBuf, "E %sを拾う", m_DisplayName);
 	return m_PromptBuf;
+}
+
+void Item::SetItemId(int id)
+{
+	m_ItemId = id;
+
+	// Init()は生成直後にAddComponent<ModelRenderer>()するだけの箱を
+	// 作っているので、ここで本来のIDに応じたモデルに差し替える。
+	// ModelRenderer::Load()は同じファイル名なら2回目以降キャッシュを
+	// 使うだけなので、呼び出しコスト自体は気にしなくていい。
+	if (m_ModelRenderer)
+		m_ModelRenderer->Load(GetModelPathForItemId(id));
 }
 
 void Item::Interact()
@@ -66,8 +98,9 @@ void Item::Draw()
 	Renderer::GetDeviceContext()->VSSetShader(m_VertexShader, NULL, 0);
 	Renderer::GetDeviceContext()->PSSetShader(m_PixelShader, NULL, 0);
 
-	// key.obj shares box.obj's local convention (X/Z centered, Y from 0 at
-	// the base) -- see key.cpp's Draw() for the same math.
+	// key.obj / Item_Photo.obj / Item_Letter.obj / Item_MetalPart.obj は
+	// どれも同じローカル規約(X/Z中心、Yは0が根元)でモデリングしてあるので、
+	// この行列計算は共通のまま変更不要 -- 各モデルのコメント参照。
 	XMMATRIX world, scale, rot, trans;
 	scale = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z);
 	rot = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y, m_Rotation.z);

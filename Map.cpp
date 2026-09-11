@@ -14,6 +14,9 @@
 #include "woodenPallet.h"
 #include "crate.h"
 #include "ivy.h"
+#include "debris.h"
+#include "stainDirt.h"
+#include "stainBlood.h"
 #include <cmath>
 #include <vector>
 
@@ -517,8 +520,21 @@ namespace
 		else
 			ThinWallAxis(kCellHalf, !IsSolidCell(row - 1, col), !IsSolidCell(row + 1, col), thicknessOffset, thicknessHalf);
 
+		// STEP: 袖壁/まぐさはthicknessOffsetで実際の壁面(片側が開放なら
+		// そちら寄り)に揃えているのに、ドア本体(枠+扉)は今までcenterの
+		// まま固定でthicknessOffsetを反映していなかった。対称なケース
+		// (両隣とも壁 or 両隣とも開放)ではoffsetが0なので気づかなかったが、
+		// 片側だけ開放/境界に接する非対称なドア(出口の'E'など)では
+		// offsetが0でなくなり、枠だけ壁からズレて浮いて見える原因になって
+		// いた -- ドア本体にも同じoffsetを適用して揃える。
+		Vector3 doorPos = center;
+		if (widthIsZ)
+			doorPos.x += thicknessOffset;
+		else
+			doorPos.z += thicknessOffset;
+
 		Door* door = Manager::AddGameObject<Door>();
-		door->SetPosition({ center.x, WALL_HEIGHT / 2.0f, center.z });
+		door->SetPosition({ doorPos.x, WALL_HEIGHT / 2.0f, doorPos.z });
 		door->SetScale({ kCellHalf, WALL_HEIGHT / 2.0f, kCellHalf }); // 当たり判定は今まで通りセル全体
 		door->SetRotation({ 0.0f, kDoorYaw, 0.0f });
 
@@ -588,6 +604,38 @@ namespace
 		Ivy* ivy = Manager::AddGameObject<Ivy>();
 		ivy->SetPosition({ position.x, WALL_HEIGHT, position.z });
 		ivy->SetRotation({ 0.0f, wallYRotation, 0.0f });
+	}
+
+	// STEP: 「床の汚れ・血・木の棒とかで廃墟っぽさを増やしたい」との要望で
+	// 追加。3つとも他の廃墟プロップ(Crate/Ivy等)と同じくテクスチャが手元に
+	// 無いので単色プレースホルダー -- debris.h/stainDirt.h/stainBlood.h参照。
+
+	// 床に転がった木の棒/板きれ。yRotationで向きを変えるだけで、tiltを
+	// 渡すとX軸(倒れ込み方向)にも少し傾けられる(平らな床置きなら基本0でOK)。
+	void SpawnDebris(const Vector3& position, float yRotation, float scale = 1.0f, float tilt = 0.0f)
+	{
+		Debris* debris = Manager::AddGameObject<Debris>();
+		debris->SetPosition(position);
+		debris->SetRotation({ tilt, yRotation, 0.0f });
+		debris->SetScale({ scale, scale, scale });
+	}
+
+	// 床にへばりついた汚れ。scaleで1個ずつ大きさを変えるとバラつきが出る。
+	void SpawnDirtStain(const Vector3& position, float yRotation, float scale = 1.0f)
+	{
+		StainDirt* stain = Manager::AddGameObject<StainDirt>();
+		stain->SetPosition(position);
+		stain->SetRotation({ 0.0f, yRotation, 0.0f });
+		stain->SetScale({ scale, 1.0f, scale });
+	}
+
+	// 血だまり+飛び散った飛沫。ホラー演出用なので、汚れより数は控えめに。
+	void SpawnBloodStain(const Vector3& position, float yRotation, float scale = 1.0f)
+	{
+		StainBlood* stain = Manager::AddGameObject<StainBlood>();
+		stain->SetPosition(position);
+		stain->SetRotation({ 0.0f, yRotation, 0.0f });
+		stain->SetScale({ scale, 1.0f, scale });
 	}
 }
 
@@ -789,4 +837,41 @@ void Map::Init()
 	SpawnIvy(CellCenter(9, 1) + Vector3(0.0f, 0.0f, -(CELL_SIZE / 2.0f - 0.15f)), 0.0f); // room C 北壁
 	SpawnIvy(CellCenter(2, 5) + Vector3(0.0f, 0.0f, -(CELL_SIZE / 2.0f - 0.15f)), 0.0f); // room B 北壁
 	SpawnIvy(CellCenter(8, 5) + Vector3(0.3f, 0.0f, -(CELL_SIZE / 2.0f - 0.15f)), 0.0f); // room N 北壁(もう1本、密度アップ)
+
+	// STEP: 「床の汚れ・血・木の棒とかで廃墟っぽさを増やしたい」との要望で
+	// 追加。既存の家具(Stool/Pallet/Crate)やK・X・M等のアイテムマスと重なる
+	// 位置は避けて、各部屋+中央廊下に散らしてある。
+
+	// room A
+	SpawnDirtStain(CellCenter(2, 1) + Vector3(0.25f, 0.0f, 0.3f), 0.4f, 1.1f);
+	SpawnDebris(CellCenter(1, 3) + Vector3(0.3f, 0.0f, -0.2f), 1.0f, 0.9f);
+
+	// room B
+	SpawnDebris(CellCenter(1, 5) + Vector3(0.4f, 0.0f, 0.3f), 2.4f, 1.0f);
+	SpawnBloodStain(CellCenter(3, 7) + Vector3(-0.2f, 0.0f, 0.3f), 1.2f, 0.9f);
+
+	// room C
+	SpawnDirtStain(CellCenter(9, 3) + Vector3(-0.3f, 0.0f, -0.2f), 2.0f, 0.95f);
+	SpawnDebris(CellCenter(10, 3) + Vector3(0.2f, 0.0f, 0.4f), 0.3f, 1.1f);
+
+	// room N -- 最後の部屋(出口手前)なので、緊張感を出すために血だまりも
+	// もう1個追加。
+	SpawnDirtStain(CellCenter(10, 5) + Vector3(0.3f, 0.0f, -0.3f), 0.7f, 1.0f);
+	SpawnBloodStain(CellCenter(9, 7) + Vector3(-0.25f, 0.0f, 0.25f), 3.4f, 1.2f);
+	SpawnDebris(CellCenter(9, 6) + Vector3(-0.3f, 0.0f, 0.35f), 1.8f, 0.85f);
+
+	// 中央廊下にも少し
+	SpawnDirtStain(CellCenter(5, 4) + Vector3(0.2f, 0.0f, 0.0f), 1.5f, 1.0f);
+	SpawnDebris(CellCenter(6, 8) + Vector3(-0.2f, 0.0f, 0.3f), 2.7f, 1.0f);
+	SpawnDirtStain(CellCenter(6, 2) + Vector3(-0.15f, 0.0f, 0.2f), 0.9f, 0.85f);
+
+	// STEP: 「ホラー演出を多めに」との要望で追加。出口(E, row10 col5)へ
+	// 続く廊下に血の跡を点々と残して、出口手前で一番大きな血だまりに
+	// なるように並べてある(何かが引きずられて出口に向かった感じの演出)。
+	// 加えて部屋Aにも1個追加 -- 血が1部屋(B/N)だけに偏らないように。
+	SpawnBloodStain(CellCenter(3, 2) + Vector3(0.3f, 0.0f, -0.2f), 1.7f, 0.9f);   // room A
+	SpawnBloodStain(CellCenter(6, 7) + Vector3(0.15f, 0.0f, -0.2f), 0.6f, 0.9f);  // 廊下(出口へ向かう血の跡 1/4)
+	SpawnBloodStain(CellCenter(5, 8) + Vector3(-0.25f, 0.0f, 0.15f), 2.1f, 1.0f); // 廊下(2/4)
+	SpawnBloodStain(CellCenter(6, 9) + Vector3(0.1f, 0.0f, -0.3f), 1.0f, 0.95f);  // 廊下(3/4)
+	SpawnBloodStain(CellCenter(5, 9) + Vector3(-0.1f, 0.0f, 0.25f), 3.0f, 1.3f);  // 廊下(4/4、出口直前で一番大きく)
 }

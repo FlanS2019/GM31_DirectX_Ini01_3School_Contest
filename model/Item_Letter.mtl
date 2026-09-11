@@ -1,0 +1,11 @@
+# procedurally generated placeholder material -- see Item_Letter.obj
+# Same Kd/Ke reasoning as Item_Photo.mtl -- pale, slightly yellowed "old
+# paper" tone, distinct from the photo's warmer sepia.
+newmtl FadedLetter
+Ka 1.000000 1.000000 1.000000
+Kd 0.580000 0.540000 0.380000
+Ks 0.050000 0.050000 0.050000
+Ke 0.050000 0.045000 0.030000
+Ns 8.000000
+d 1.000000
+illum 2
