@@ -14,7 +14,6 @@ private:
 
 	ID3D11ShaderResourceView* m_Texture;
 
-	// STEP40: タイトルロゴ/スプラッシュロゴのフェードイン・アウトで使う。Init()に渡された位置・サイズを保持しておき、Draw()のたびに現在のm_Alphaで頂点バッファを作り直す
 	// (unlitTexturePS.hlslはMaterial.Diffuseではなく頂点側のIn.Diffuse.wしか見ていないため、Material定数バッファ経由では
 	// フェードできない -- shader\unlitTexturePS.hlsl / shader\common.hlsl参照)。
 	float m_X = 0.0f;

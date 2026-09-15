@@ -14,14 +14,11 @@ namespace
 	const float kVignetteStrength = 0.55f;     // 常時の縁の暗さ(懐中電灯ON時)
 	const float kVignetteStrengthDark = 0.8f;  // 懐中電灯OFF時はさらに濃く
 
-	// STEP21: 両方のアンビエントSE共通 -- 幅のあるランダム間隔にして、メトロノームに聞こえないように(light.cppのフリッカー間隔と同じ考え方)。
 	const float kAmbientMinInterval = 22.0f;
 	const float kAmbientMaxInterval = 50.0f;
 
-	// STEP43: 近接ジャンプスケアの判定半径(XZ平面のみ、Yは無視)。
 	const float kProximityScareRadius = 4.0f;
 
-	// STEP43: 画面グリッチの発生間隔。アンビエントSEと同じ考え方でHorrorIntervalScale()を掃ける。
 	const float kGlitchMinInterval = 35.0f;
 	const float kGlitchMaxInterval = 70.0f;
 	const float kGlitchPhaseDuration = 0.08f; // 1フェーズ(暗 or 明)の長さ
@@ -32,9 +29,6 @@ namespace
 		return lo + (hi - lo) * (float(rand()) / float(RAND_MAX));
 	}
 
-	// STEP24: 設定画面の「ホラー演出の強さ」(0=弱,1=中,2=強)を反映するための
-	// 小さな倍率ヘルパー2つ。GameSettings/SettingsScreen側は0..2の整数しか
-	// 知らなくてよく、実際の演出パラメータへの写像はここに閉じ込める。
 	float HorrorIntensityScale() // ヴィネット/フラッシュの強さに掛ける
 	{
 		switch (GameSettings::GetHorrorIntensity())
@@ -66,8 +60,6 @@ void Horror::Init()
 	m_ScareSting->Load("audio\\SE\\zyosei1-warai1.mp3");
 	SoundManager::RegisterSe(m_ScareSting, 1.0f); // STEP24
 
-	// STEP21: 不定期アンビエントSE、2本 -- 笑い声はm_ScareStingと同じmp3だが、別のAudioコンポーネントに
-	// してある(上のクラスコメント参照)。
 	m_AmbientLaugh = AddComponent<Audio>();
 	m_AmbientLaugh->Load("audio\\SE\\zyosei1-warai1.mp3");
 	SoundManager::RegisterSe(m_AmbientLaugh, 1.0f); // STEP24
@@ -91,8 +83,6 @@ void Horror::Uninit()
 
 void Horror::Update()
 {
-	// 懐中電灯がOFFの間だけ心臓の鼓動ループ -- 「暗闇にひとり」の緊張感。
-	// Light::IsFlashlightOn()を覗くだけでlight.cpp側には一切手を入れない。
 	Light* light = Manager::GetGameObject<Light>();
 	bool wantHeartbeat = light && !light->IsFlashlightOn();
 
@@ -113,8 +103,6 @@ void Horror::Update()
 		if (m_FlashTimer < 0.0f) m_FlashTimer = 0.0f;
 	}
 
-	// STEP21: 不定期アンビエントSE -- カウントダウンが0以下になったフレームで1回再生して、
-	// 次のランダム間隔を引き直す。TriggerJumpScare()とは完全に独立。
 	m_AmbientLaughTimer -= 1.0f / 60.0f;
 	if (m_AmbientLaughTimer <= 0.0f)
 	{
@@ -143,9 +131,6 @@ void Horror::TriggerJumpScare()
 
 void Horror::CheckProximityScares()
 {
-	// STEP43: 部屋C(CellCenter(9,2)付近)と部屋N(CellCenter(9,6)付近)の奥に入ったらそれぞれ
-	// 一度だけTriggerJumpScare()を鳴らす。Map.cppのCellCenter()と同じ座標系の生の数値をここに直接置く
-	// (Map.cppに依存させたくないのでヘッダは増やさない)。
 	Player* player = Manager::GetGameObject<Player>();
 	if (!player) return;
 	Vector3 pos = player->GetPosition();
@@ -175,9 +160,6 @@ void Horror::CheckProximityScares()
 
 void Horror::UpdateGlitchEvent()
 {
-	// STEP43: 一定時間おきに、画面を数回黒く点滅させる「グリッチ」演出。
-	// ついでに今まで一度も呼ばれていなかったLight::StartFlicker()/StopFlicker()も
-	// 使って照明も同時にチラつかせる(既存の動作には一切影響しない -- light.cpp参照)。
 	if (!m_GlitchActive)
 	{
 		m_GlitchTimer -= 1.0f / 60.0f;
@@ -221,7 +203,6 @@ void Horror::DrawScreenEffects()
 	Light* light = Manager::GetGameObject<Light>();
 	bool flashlightOn = light && light->IsFlashlightOn();
 
-	// STEP24: 「ホラー演出の強さ」設定 -- 1.0を超えないようクランプする
 	// (strengthは不透明度そのものなので、1.0を超えると意味がない)。
 	float vignette = (flashlightOn ? kVignetteStrength : kVignetteStrengthDark) * HorrorIntensityScale();
 	if (vignette > 1.0f) vignette = 1.0f;
@@ -238,7 +219,6 @@ void Horror::DrawScreenEffects()
 
 	if (m_GlitchActive && m_GlitchDarkPhase)
 	{
-		// STEP43: グリッチの暗転フェーズ -- ほぼ真っ黒(0.92)を一瞬だけ被せて「停電した」ような違和感を出す。
 		Hud::DrawFullScreenTint(0.0f, 0.0f, 0.0f, 0.92f);
 	}
 }
