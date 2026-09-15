@@ -13,15 +13,14 @@ public:
 	{
 		m_Bgm = AddComponent<Audio>();
 		m_Bgm->Load("audio\\BGM\\abandoned_hospital.mp3");
-		SoundManager::RegisterBgm(m_Bgm); // STEP24: 設定画面のBGM音量スライダーを反映
-		m_Bgm->Play(true); // ループ再生
+		SoundManager::RegisterBgm(m_Bgm); 
 	}
 	void Uninit() override
 	{
 		if (m_Bgm)
 		{
-			SoundManager::Unregister(m_Bgm); // STEP24
-			m_Bgm->Uninit();  // ← ここ追加：SourceVoiceをStop/Destroy
+			SoundManager::Unregister(m_Bgm); 
+			m_Bgm->Uninit(); 
 		}
 	}
 	void Update() override {}

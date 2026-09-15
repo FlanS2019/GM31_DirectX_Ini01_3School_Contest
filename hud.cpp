@@ -18,9 +18,9 @@ namespace
 	ID2D1SolidColorBrush* g_TextBrush = nullptr;
 	ID2D1SolidColorBrush* g_ShadowBrush = nullptr;
 	ID2D1SolidColorBrush* g_PanelBrush = nullptr;
-	ID2D1RadialGradientBrush* g_VignetteBrush = nullptr; // STEP15 -- see Hud::DrawVignette()
+	ID2D1RadialGradientBrush* g_VignetteBrush = nullptr; 
 
-	bool g_Ready = false; // stays false (DrawText becomes a silent no-op) if any of the setup below fails
+	bool g_Ready = false;
 }
 
 namespace
@@ -68,10 +68,6 @@ void Hud::Init()
 	g_D2DRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &g_ShadowBrush);
 	g_D2DRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black, 0.55f), &g_PanelBrush);
 
-	// STEP15: vignette brush -- built once here, reused every frame by
-	// DrawVignette(). Non-fatal if this fails (g_VignetteBrush just stays
-	// null and DrawVignette() silently no-ops) -- the rest of the HUD
-	// (prompts/hotbar) doesn't depend on it.
 	{
 		D2D1_GRADIENT_STOP gradStops[2] = {};
 		gradStops[0].position = 0.0f;
@@ -207,9 +203,6 @@ void Hud::DrawTextAlpha(const char* text, float x, float y, float size, bool cen
 
 	float left = centered ? (x - metrics.width * 0.5f) : x;
 
-	// STEP32: g_TextBrush/g_ShadowBrushは他のDrawText()呼び出しとも共有
-	// しているstaticなブラシなので、ここで変えた不透明度は描画後に必ず
-	// 1.0へ戻す(でないと同じフレーム内の他のテキストまで薄くなる)。
 	g_TextBrush->SetOpacity(alpha);
 	g_ShadowBrush->SetOpacity(alpha);
 

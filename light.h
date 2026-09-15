@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gameObject.h"
-#include "renderer.h" // LIGHT struct
+#include "renderer.h"
 
 class Light : public GameObject
 {
@@ -27,8 +27,6 @@ private:
 
 	float m_FlashlightIntensityScale = 1.0f;
 
-	// STEP24: 設定画面の「画面の光量」用。0..1の素の値をPush()で使う
-	// スケールへ変換したもの -- SetBrightness01()のコメント参照。
 	float m_BrightnessScale = 1.0f;
 
 	void Push(); // uploads the current state to Renderer::SetLight()
@@ -41,20 +39,15 @@ public:
 	void StartFlicker() { m_FlickerActive = true; m_FlickerTimer = 0.0f; m_FlickerNextEventTime = 0.0f; }
 	void StopFlicker();
 
-	// For a "the power goes out" event later; not used yet.
 	void SetEnable(bool enable) { m_Enable = enable; }
 
 	void SetDirection(const XMFLOAT4& direction) { m_Direction = direction; }
 	void SetAmbient(const XMFLOAT4& ambient) { m_Ambient = ambient; }
 	void SetDiffuse(const XMFLOAT4& diffuse) { m_Diffuse = diffuse; }
 
-	// STEP5
 	void SetFlashlight(bool on) { m_FlashlightOn = on; }
 	void ToggleFlashlight() { m_FlashlightOn = !m_FlashlightOn; }
 	bool IsFlashlightOn() const { return m_FlashlightOn; }
 
-	// STEP24: GameSettingsの「画面の光量」(0..1)を反映する。演出上の
-	// 暗さの下限を守るマッピングはlight.cpp側でやる(GameSettings/
-	// SettingsScreenは素の0..1しか知らなくていい)。
 	void SetBrightness01(float brightness01);
 };

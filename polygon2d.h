@@ -29,8 +29,6 @@ public:
 	void Update()override;
 	void Draw()override;
 
-	// STEP40: 0=完全に透明、1=不透明。呼び出し側(TitleLogo/SplashLogo)が毎フレームUpdate()内で
-	// セットし、Draw()が頂点バッファのDiffuse.wをUpdateSubresource()で書き換える。
 	void SetAlpha(float alpha) { m_Alpha = alpha; }
 	float GetAlpha() const { return m_Alpha; }
 };

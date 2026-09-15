@@ -24,10 +24,6 @@ void LoadingScreen::Init()
 	m_Layer = 10;
 	m_StepIndex = 0;
 
-	// STEP40: Game::Init()の元の13行と全く同じ順番・内容。GameStartTextは
-	// 「ゲームスタート」フェード演出なので、ロード完了直後に見えるよう
-	// 必ず最後のステップにする(Input::SetMouseCaptureEnabled(true)も
-	// 同じタイミング -- 元のGame::Init()末尾にあったもの)。
 	m_Steps.push_back({ []() { Manager::AddGameObject<Camera>(); }, "カメラ" });
 	m_Steps.push_back({ []() { Manager::AddGameObject<Light>(); }, "ライト" });
 	m_Steps.push_back({ []() { Manager::AddGameObject<Field>(); }, "地面" });

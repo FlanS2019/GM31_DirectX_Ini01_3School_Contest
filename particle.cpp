@@ -78,11 +78,6 @@ void Particle::Update()
 {
 	float dt = 1.0f / 60.0f;
 
-	// STEP13: ambient floating-dust mode -- no gravity, no one-shot burst.
-	// Keeps m_AmbientCount motes alive at all times, each just drifting
-	// slowly upward inside the box and quietly resetting to the bottom
-	// once it drifts above m_SpawnHeight, instead of falling/expiring like
-	// the explosion-burst particles below.
 	if (m_AmbientMode)
 	{
 		for (int i = 0; i < m_AmbientCount; i++)
@@ -110,8 +105,6 @@ void Particle::Update()
 
 				if (m_Particle[i].Position.y > m_Position.y + m_SpawnHeight)
 				{
-					// drifted out the top -- recycle back near the floor with a
-					// fresh random XZ so it doesn't look like it teleports in a line
 					m_Particle[i].Position.x = m_Position.x + ((float)rand() / RAND_MAX - 0.5f) * m_SpawnRadius * 2.0f;
 					m_Particle[i].Position.y = m_Position.y;
 					m_Particle[i].Position.z = m_Position.z + ((float)rand() / RAND_MAX - 0.5f) * m_SpawnRadius * 2.0f;

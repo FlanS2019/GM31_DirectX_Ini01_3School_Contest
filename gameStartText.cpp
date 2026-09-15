@@ -5,7 +5,6 @@
 
 namespace
 {
-	// フェードイン0.6秒 → 1.0秒表示 → フェードアウト1.0秒、で消える。
 	const float kFadeIn = 0.6f;
 	const float kHold = 1.0f;
 	const float kFadeOut = 1.0f;
@@ -51,13 +50,10 @@ void GameStartText::Draw()
 
 	Hud::Begin();
 
-	// STEP36: 「ゲームスタート」だと味気ないとのことで文言変更。
-	// ホラー演出として、表示が安定しているはずの区間でもたまに1フレーム
-	// だけ描画を飛ばして「不安定にチラつく」感じを出す(rand()で軽く)。
 	bool flicker = (rand() % 14 == 0);
 	if (!flicker)
 	{
-		Hud::DrawTextAlpha("廃墟、はじめ", SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT * 0.42f, 72.0f, true, alpha); // STEP34: 1.5x
+		Hud::DrawTextAlpha("廃墟、はじめ", SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT * 0.42f, 72.0f, true, alpha); 
 	}
 
 	Hud::End();

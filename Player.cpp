@@ -18,22 +18,8 @@
 
 namespace
 {
-	// increments once per Player::Update call -- lets the debug log show
-	// whether two [COLLIDE] lines happened in the SAME frame or several
-	// frames apart, which the old log (no frame number) couldn't tell you.
 	unsigned s_DebugFrame = 0;
 
-	// DEBUG: writes every log line to a file (in addition to
-	// OutputDebugStringA) so it survives independent of when the VS Output
-	// window gets copied -- that window's content is only good until the
-	// next F5, so a video from one run and a log copied after starting the
-	// next run don't actually match. This file is truncated fresh at the
-	// start of each run (Player::Init) and every line is flushed
-	// immediately, so whatever's in it after closing the game is exactly
-	// that run's log, however it ends (including a crash). It lands next to
-	// the other relative paths this project already uses (model\\...,
-	// shader\\...), i.e. wherever the .exe's working directory is -- same
-	// place, every run.
 	FILE* s_DebugLogFile = nullptr;
 
 	void DebugLog(const char* text)
@@ -51,7 +37,6 @@ void Player::Init()
 {
 	m_Layer = 8;
 
-	// DEBUG: fresh log file every run -- see DebugLog() above.
 	if (!s_DebugLogFile)
 	{
 		fopen_s(&s_DebugLogFile, "debug_log.txt", "w");
@@ -68,22 +53,13 @@ void Player::Init()
 	m_JumpSE = AddComponent<Audio>();
 	m_JumpSE->Load("audio\\SE\\wan.mp3");
 
-	// STEP21: footstep loop + shared pickup one-shot -- see Player.h's
-	// comments on m_WalkSE/m_PickupSE for why pickup SE lives here instead
-	// of on Key/Item themselves.
 	m_WalkSE = AddComponent<Audio>();
 	m_WalkSE->Load("audio\\SE\\kawagutu_arukuoto.mp3");
-	// STEP23: "•à‚­‰¹‚ð‚Å‚Á‚©‚­‚µ‚Ä‚Ù‚µ‚¢" -- STEP22's 0.45 (a reduction)
-	// turned out to be too quiet to hear at all, not too loud; boosted past
-	// the default 1.0. STEP24: no longer a direct SetVolume() -- 1.6f is now
-	// registered with SoundManager as this SE's "base volume", with the
-	// settings screen's SE-volume slider multiplying on top of it (see
-	// SoundManager::RegisterSe()).
 	SoundManager::RegisterSe(m_WalkSE, 1.6f);
 
 	m_PickupSE = AddComponent<Audio>();
 	m_PickupSE->Load("audio\\SE\\sei_ge_shinbun_toru01.mp3");
-	SoundManager::RegisterSe(m_PickupSE, 1.0f); // STEP24
+	SoundManager::RegisterSe(m_PickupSE, 1.0f);
 
 	m_Shadow = Manager::AddGameObject<Shadow>();
 	m_Shadow->SetScale({ 5.0f, 5.0f, 5.0f });
@@ -99,9 +75,6 @@ void Player::Uninit()
 	if (m_PickupSE) { SoundManager::Unregister(m_PickupSE); m_PickupSE->Uninit(); }
 }
 
-// STEP21: called by Key::Update()/Item::Interact() on a successful pickup --
-// see Player.h's m_PickupSE comment for why the sound plays from here
-// instead of from the (about-to-be-destroyed) Key/Item object itself.
 void Player::PlayPickupSE()
 {
 	if (m_PickupSE) m_PickupSE->Play(false);
@@ -119,7 +92,6 @@ void Player::Update()
 		}
 	}
 
-	// fixed-step dt (fine for a school-contest build; swap for a real delta time later)
 	float dt = 1.0f / 60.0f;
 
 	const float accel = 1.0f;
@@ -128,12 +100,10 @@ void Player::Update()
 	const float gravity = 60.0f;
 	const float jumpImpulse = 25.0f;
 
-	// --- Sprint (Shift) ---
 	const float sprintMultiplier = Input::GetKeyPress(VK_SHIFT) ? 2.0f : 1.0f;
 	const float currentAccel = accel * sprintMultiplier;
 	const float currentMaxSpeed = maxSpeed * sprintMultiplier;
 
-	// --- First-person: body yaw always matches the camera's look direction ---
 	Camera* camera = Manager::GetGameObject<Camera>();
 	float camYaw = camera ? camera->GetYaw() : 0.0f;
 	m_Rotation.y = camYaw;
@@ -141,7 +111,6 @@ void Player::Update()
 	Vector3 camForward(sinf(camYaw), 0.0f, cosf(camYaw));
 	Vector3 camRight(cosf(camYaw), 0.0f, -sinf(camYaw));
 
-	// --- Movement input (relative to view direction) ---
 	bool moving = false;
 	float inputX = 0.0f;
 	float inputZ = 0.0f;
@@ -159,18 +128,11 @@ void Player::Update()
 		moveDir.z /= moveLen;
 	}
 
-	// --- Ground check ---
 	const float groundEpsilon = 0.001f;
 	bool grounded = (m_Position.y <= groundEpsilon);
 	bool oldGround = m_Grounded;
 	m_Grounded = false;
 
-	// STEP21: footstep SE loop -- only while actually moving on the ground
-	// (no phantom footsteps mid-air/mid-jump). Toggled only on the frame
-	// the state changes, same "Play(true) once / Stop() once" pattern
-	// Horror's heartbeat and LightTube's flicker SE both already use --
-	// calling Play(true) every frame would restart the loop constantly
-	// instead of actually looping it.
 	{
 		bool walking = moving && grounded;
 		if (walking && !m_WalkPlaying)
@@ -215,7 +177,6 @@ void Player::Update()
 	// gravity
 	m_Velocity.y -= gravity * dt;
 
-	// horizontal velocity magnitude (used for friction)
 	Vector3 horizontalVel(m_Velocity.x, 0.0f, m_Velocity.z);
 	float hSpeed = std::sqrt(horizontalVel.x * horizontalVel.x + horizontalVel.z * horizontalVel.z);
 
@@ -236,7 +197,6 @@ void Player::Update()
 		}
 		else
 		{
-			// no input: decelerate with friction
 			if (hSpeed > 0.0f)
 			{
 				float decel = friction * dt;
@@ -257,7 +217,6 @@ void Player::Update()
 
 	Vector3 debugPosBeforeMove = m_Position;
 
-	// integrate velocity into position
 	m_Position.x += m_Velocity.x * dt;
 	m_Position.y += m_Velocity.y * dt;
 	m_Position.z += m_Velocity.z * dt;
@@ -297,11 +256,11 @@ void Player::Update()
 		Box* bestBox = nullptr;
 		Vector3 bestBoxPos{}, bestBoxScale{};
 		float bestPen = 0.0f;
-		char bestAxis = 0; // 'X' or 'Z' -- no 'T' (top) case, see above
+		char bestAxis = 0;
 
 		for (auto box : boxes)
 		{
-			if (!box->IsBlocking()) continue; // e.g. a Door that's (fully) open
+			if (!box->IsBlocking()) continue;
 
 			Vector3 boxPosition = box->GetPosition();
 			Vector3 boxScale = box->GetScale();
@@ -334,9 +293,6 @@ void Player::Update()
 
 		const float pushClearance = 0.3f;
 
-		// --- DEBUG: print exactly what this collision event did, with a
-		// frame number so consecutive lines can be told apart as same-frame
-		// vs different-frame.
 		{
 			char buf[256];
 			sprintf_s(buf,

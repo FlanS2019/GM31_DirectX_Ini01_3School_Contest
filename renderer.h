@@ -26,13 +26,13 @@ struct MATERIAL
 struct LIGHT
 {
 	BOOL		Enable;
-	BOOL		IsSpot;     // false = old-style infinite directional light; true = handheld flashlight (STEP5)
+	BOOL		IsSpot;
 	BOOL		Dummy[2];
-	XMFLOAT4	Direction;  // directional: the light's direction. spot: the direction it's aimed.
+	XMFLOAT4	Direction;
 	XMFLOAT4	Diffuse;
 	XMFLOAT4	Ambient;
-	XMFLOAT4	Position;   // spot light origin (world space); unused when IsSpot is false
-	XMFLOAT4	SpotParams; // x = cos(inner cone), y = cos(outer cone), z = range, w unused
+	XMFLOAT4	Position;
+	XMFLOAT4	SpotParams;
 };
 
 struct POINT_LIGHT
@@ -42,9 +42,6 @@ struct POINT_LIGHT
 	XMFLOAT4 Params; // x = range
 };
 
-// How many times the diffuse texture repeats across an object's UV, instead
-// of stretching. Everything defaults to (1,1) (today's look, unchanged) --
-// see Renderer::SetWorldMatrix()/SetUVTiling() and box.cpp's Draw().
 struct UV_TILING
 {
 	float U;
@@ -70,12 +67,6 @@ private:
 	static ID3D11Buffer*			m_MaterialBuffer;
 	static ID3D11Buffer*			m_LightBuffer;
 
-	// STEP42: SetLight()が毎回キャッシュする。Polygon2D::Draw()が自分の描画の間だけ一時的にライトを
-	// 無効化(Enable=false)して元に戻すために使う(GetLight()参照)。unlitTexturePS.hlslは
-	// 名前に反してLight.Enableがtrueならシーンのライティングをそのまま適用してしまうため、
-	// タイトルロゴ/UIのPolygon2Dをこのシェーダーで描くとLightの暗いAmbient(ホラー演出用)の
-	// 影響を受けてほぼ見えなくなる(polygon2d.cpp参照)。他の全ての3Dオブジェクト(Player/
-	// 壁/boxなど)はこのシェーダーを共有しているのでシェーダー自体は変えず、C++側で一時退避する。
 	static LIGHT m_CurrentLight;
 
 	static ID3D11Buffer* m_PointLightBuffer;
@@ -106,7 +97,7 @@ public:
 	static void SetProjectionMatrix(XMMATRIX ProjectionMatrix);
 	static void SetMaterial(MATERIAL Material);
 	static void SetLight(LIGHT Light);
-	static LIGHT GetLight() { return m_CurrentLight; } // STEP42
+	static LIGHT GetLight() { return m_CurrentLight; }
 	static void AddPointLight(XMFLOAT3 position, XMFLOAT3 color, float range);
 	static void SetUVTiling(float U, float V);
 

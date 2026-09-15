@@ -8,10 +8,8 @@
 
 namespace
 {
-	// STEP41: logo_splash.pngを再生成(テキスト/線がキャンバス四方に食い込むバグを修正)し、
-	// サイズが760x220(比率3.4545:1)から858x153(比率5.608:1)に変わった。
 	const float kLogoWidth = 620.0f;
-	const float kLogoHeight = 111.0f; // 858:153の比率を保ったまま縮小
+	const float kLogoHeight = 111.0f;
 	const float kLogoX = (SCREEN_WIDTH - kLogoWidth) * 0.5f;
 	const float kLogoY = (SCREEN_HEIGHT - kLogoHeight) * 0.5f;
 
@@ -36,8 +34,6 @@ void SplashLogo::Update()
 {
 	if (!m_Logo || m_ChangedScene) return;
 
-	// STEP40: 何かキーを押すかマウスをクリックすると、静止時間をスキップ
-	// して一気にフェードアウトに入る(0秒で切って唐突にはしない)。
 	if (!m_Skipped && (Input::GetKeyTrigger(VK_RETURN) || Input::GetKeyTrigger(VK_SPACE) || Input::GetKeyTrigger(VK_ESCAPE) || Input::GetMouseLeftTrigger()))
 	{
 		if (m_Timer < kFadeIn + kHold)

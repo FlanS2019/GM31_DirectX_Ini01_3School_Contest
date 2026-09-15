@@ -3,10 +3,9 @@
 
 class Camera : public GameObject
 {
-protected: // STEP29: MenuCamera‚©‚ç’¼Ú‚¢‚¶‚ê‚é‚æ‚¤‚Éprivate‚©‚ç•ÏX
+protected: 
 	Vector3 m_Target{ 0, 0, 0 };
 
-	// First-person look angles (radians)
 	float m_Yaw = 0.0f;   // left/right
 	float m_Pitch = 0.0f; // up/down
 

@@ -5,8 +5,6 @@
 
 void MenuSound::Init()
 {
-	// STEP27: カーソル移動音は決定音より控えめな音量にしてある
-	// (baseVolumeの違い -- SoundManager::RegisterSe()参照)。
 	m_MoveSE = AddComponent<Audio>();
 	m_MoveSE->Load("audio\\SE\\Horror_Accent06-2(Short).mp3");
 	SoundManager::RegisterSe(m_MoveSE, 0.7f);

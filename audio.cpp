@@ -203,10 +203,6 @@ void Audio::Uninit()
 	delete[] m_SoundData;
 }
 
-// STEP15: Play()内部で毎回やっているStop()+FlushSourceBuffersだけを
-// publicに出しただけ -- ループ再生(Heartbeatなど)を「止める」時に
-// Play()を呼ぶと新しいバッファを積んでStart()し直してしまう(非ループの
-// 一回再生が始まる)ので、それとは別に本当に止めるための関数が要る。
 void Audio::Stop()
 {
 	if (!m_SourceVoice) return;
@@ -215,8 +211,6 @@ void Audio::Stop()
 	m_SourceVoice->FlushSourceBuffers();
 }
 
-// STEP22: 次のPlay()でも音量は保たれる(SetVolume()はSourceVoice自体のパラメータで、
-// Play()のバッファ差し替えではリセットされない)ので、Load()直後に1回呼べばいい。
 void Audio::SetVolume(float volume)
 {
 	if (!m_SourceVoice) return;

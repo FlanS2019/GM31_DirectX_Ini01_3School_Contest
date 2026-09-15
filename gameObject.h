@@ -102,7 +102,6 @@ public:
 	}
 	Vector3 GetRight()
 	{
-		// rot をローカル変数として定義
 		XMMATRIX rot = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y, m_Rotation.z); // 回転量
 		// XMVECTOR から Vector3 へ変換
 		Vector3 forward;
@@ -135,10 +134,5 @@ public:
 		return m_Active;
 	}
 
-	// STEP24: 追加仕様書12項「ポーズ中はゲームのUpdate処理を止める」用。
-	// Manager::Update()はManager::IsPaused()==trueの間、この関数がtrueを
-	// 返すオブジェクトだけUpdate()を呼び続ける(既定はfalse=止まる)。
-	// PauseMenu/SettingsScreen自身のように「ポーズ状態を管理する側」の
-	// オブジェクトだけがtrueをオーバーライドする -- manager.cpp参照。
 	virtual bool UpdatesWhilePaused() const { return false; }
 };

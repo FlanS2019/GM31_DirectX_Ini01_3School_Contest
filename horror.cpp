@@ -6,7 +6,7 @@
 #include "manager.h"
 #include "soundManager.h"
 #include "gameSettings.h"
-#include "player.h" // STEP43: CheckProximityScares()がPlayer::GetPosition()を参照する
+#include "player.h" 
 #include <cstdlib>
 
 namespace
@@ -54,23 +54,23 @@ void Horror::Init()
 {
 	m_Heartbeat = AddComponent<Audio>();
 	m_Heartbeat->Load("audio\\SE\\Heartbeat03-3(Slow-Loop).mp3");
-	SoundManager::RegisterSe(m_Heartbeat, 1.0f); // STEP24
+	SoundManager::RegisterSe(m_Heartbeat, 1.0f); 
 
 	m_ScareSting = AddComponent<Audio>();
 	m_ScareSting->Load("audio\\SE\\zyosei1-warai1.mp3");
-	SoundManager::RegisterSe(m_ScareSting, 1.0f); // STEP24
+	SoundManager::RegisterSe(m_ScareSting, 1.0f); 
 
 	m_AmbientLaugh = AddComponent<Audio>();
 	m_AmbientLaugh->Load("audio\\SE\\zyosei1-warai1.mp3");
-	SoundManager::RegisterSe(m_AmbientLaugh, 1.0f); // STEP24
-	m_AmbientLaughTimer = RandomRange(kAmbientMinInterval, kAmbientMaxInterval) * HorrorIntervalScale(); // STEP24: 「ホラー演出の強さ」を反映
+	SoundManager::RegisterSe(m_AmbientLaugh, 1.0f); // 
+	m_AmbientLaughTimer = RandomRange(kAmbientMinInterval, kAmbientMaxInterval) * HorrorIntervalScale(); //: 「ホラー演出の強さ」を反映
 
 	m_DragSE = AddComponent<Audio>();
 	m_DragSE->Load("audio\\SE\\sei_ge_hikizuru01.mp3");
-	SoundManager::RegisterSe(m_DragSE, 1.0f); // STEP24
-	m_DragTimer = RandomRange(kAmbientMinInterval, kAmbientMaxInterval) * HorrorIntervalScale(); // STEP24
+	SoundManager::RegisterSe(m_DragSE, 1.0f); 
+	m_DragTimer = RandomRange(kAmbientMinInterval, kAmbientMaxInterval) * HorrorIntervalScale(); 
 
-	m_GlitchTimer = RandomRange(kGlitchMinInterval, kGlitchMaxInterval) * HorrorIntervalScale(); // STEP43
+	m_GlitchTimer = RandomRange(kGlitchMinInterval, kGlitchMaxInterval) * HorrorIntervalScale(); 
 }
 
 void Horror::Uninit()
@@ -93,7 +93,7 @@ void Horror::Update()
 	}
 	else if (!wantHeartbeat && m_HeartbeatPlaying)
 	{
-		m_Heartbeat->Stop(); // STEP15: audio.h/.cppに追加したStop() -- Play(false)だと非ループの再生が始まってしまうので使えない
+		m_Heartbeat->Stop(); 
 		m_HeartbeatPlaying = false;
 	}
 
@@ -107,18 +107,18 @@ void Horror::Update()
 	if (m_AmbientLaughTimer <= 0.0f)
 	{
 		if (m_AmbientLaugh) m_AmbientLaugh->Play(false);
-		m_AmbientLaughTimer = RandomRange(kAmbientMinInterval, kAmbientMaxInterval) * HorrorIntervalScale(); // STEP24
+		m_AmbientLaughTimer = RandomRange(kAmbientMinInterval, kAmbientMaxInterval) * HorrorIntervalScale(); 
 	}
 
 	m_DragTimer -= 1.0f / 60.0f;
 	if (m_DragTimer <= 0.0f)
 	{
 		if (m_DragSE) m_DragSE->Play(false);
-		m_DragTimer = RandomRange(kAmbientMinInterval, kAmbientMaxInterval) * HorrorIntervalScale(); // STEP24
+		m_DragTimer = RandomRange(kAmbientMinInterval, kAmbientMaxInterval) * HorrorIntervalScale(); 
 	}
 
-	CheckProximityScares(); // STEP43
-	UpdateGlitchEvent();    // STEP43
+	CheckProximityScares(); 
+	UpdateGlitchEvent();
 
 	GameObject::Update();
 }

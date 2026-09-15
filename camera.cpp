@@ -19,11 +19,8 @@ void Camera::Uninit()
 
 void Camera::Update()
 {
-	// --- Mouse look ---
-	// STEP24: 設定画面の「マウス感度」「Y軸反転」を反映。倍率1.0が
-	// これまでの既定挙動と同じになるようGameSettingsのデフォルトも1.0。
-	const float sensitivity = 0.0025f * GameSettings::GetMouseSensitivity(); // radians per pixel
-	const float pitchLimit = 1.5f;     // ~85 degrees, avoids gimbal flip
+	const float sensitivity = 0.0025f * GameSettings::GetMouseSensitivity();
+	const float pitchLimit = 1.5f;    
 
 	float dx = Input::GetMouseDeltaX();
 	float dy = Input::GetMouseDeltaY();
@@ -37,14 +34,12 @@ void Camera::Update()
 	while (m_Yaw > XM_PI)  m_Yaw -= XM_2PI;
 	while (m_Yaw < -XM_PI) m_Yaw += XM_2PI;
 
-	// --- Position: locked to the player's eye height ---
 	Player* player = Manager::GetGameObject<Player>();
 	Vector3 playerPos = player ? player->GetPosition() : Vector3(0.0f, 0.0f, 0.0f);
 
 	const float eyeHeight = 1.6f; // adjust to match the player collider later
 	m_Position = playerPos + Vector3(0.0f, eyeHeight, 0.0f);
 
-	// --- Look direction from yaw/pitch ---
 	Vector3 forward;
 	forward.x = cosf(m_Pitch) * sinf(m_Yaw);
 	forward.y = sinf(m_Pitch);

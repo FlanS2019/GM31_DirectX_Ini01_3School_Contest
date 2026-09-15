@@ -11,9 +11,6 @@ namespace
 	const float kFlickerMinInterval = 0.04f;
 	const float kFlickerMaxInterval = 0.35f;
 
-	// STEP22/23: minimum real time between crackle SE plays -- see the
-	// STEP21/22 note in Update() below. STEP22's 0.5s still let it fire
-	// constantly (the flicker can flip every 0.04s), so widened further.
 	const float kFlickerSEMinGap = 3.0f;
 
 	float RandomRange(float lo, float hi)
@@ -41,10 +38,6 @@ void LightTube::Uninit()
 	if (m_FlickerSE) { SoundManager::Unregister(m_FlickerSE); m_FlickerSE->Uninit(); }
 }
 
-// STEP21: lazy so a non-flickering tube (most of them -- see Map.cpp's
-// SpawnLightFixture isLit/flicker split) never loads the crackle mp3 at
-// all. Guarded so calling SetFlicker(true) more than once on the same tube
-// doesn't reload/leak a second Audio component.
 void LightTube::SetFlicker(bool flicker)
 {
 	m_FlickerActive = flicker;
@@ -53,9 +46,6 @@ void LightTube::SetFlicker(bool flicker)
 	{
 		m_FlickerSE = AddComponent<Audio>();
 		m_FlickerSE->Load("audio\\SE\\Fluorescent_Light-Noise01-1(Crackle).mp3");
-		// STEP22: "電気の音がうるさい". STEP24: 直接SetVolume()せず、0.4fを
-		// 基準音量としてSoundManagerに登録(設定画面のSE音量スライダーが
-		// この上に掛かる)。
 		SoundManager::RegisterSe(m_FlickerSE, 0.4f);
 	}
 }
@@ -64,8 +54,6 @@ void LightTube::Update()
 {
 	GameObject::Update();
 
-	// STEP22: cooldown ticks regardless of m_FlickerActive so it's always
-	// correct to check below, same reasoning as m_FlashTimer in horror.cpp.
 	if (m_FlickerSECooldown > 0.0f)
 	{
 		m_FlickerSECooldown -= 1.0f / 60.0f;
@@ -82,10 +70,6 @@ void LightTube::Update()
 			m_FlickerNextEventTime = RandomRange(kFlickerMinInterval, kFlickerMaxInterval);
 			m_FlickerOn = !m_FlickerOn;
 
-			// STEP21/22: one crackle per on/off flip, not per frame -- but no
-			// more than one every kFlickerSEMinGap seconds either, since flips
-			// can come faster than that (see kFlickerMinInterval) and stacking
-			// Play() calls that fast just sounded like noise.
 			if (m_FlickerSE && m_FlickerSECooldown <= 0.0f)
 			{
 				m_FlickerSE->Play(false);
@@ -107,7 +91,7 @@ void LightTube::Update()
 void LightTube::Draw()
 {
 	if (m_FlickerActive && !m_FlickerOn)
-		return; // チカチカのOFF瞬間 -- 光る見た目も一緒に消す
+		return;
 
 	Renderer::GetDeviceContext()->IASetInputLayout(m_VertexLayout);
 

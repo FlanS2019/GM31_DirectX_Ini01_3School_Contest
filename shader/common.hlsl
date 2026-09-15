@@ -38,13 +38,13 @@ cbuffer MaterialBuffer : register(b3)
 struct LIGHT
 {
     bool Enable;
-    bool IsSpot; // false = old-style infinite directional light; true = handheld flashlight (STEP5)
+    bool IsSpot;
     bool2 Dummy;
     float4 Direction;
     float4 Diffuse;
     float4 Ambient;
     float4 Position;
-    float4 SpotParams; // x = cos(inner cone), y = cos(outer cone), z = range, w unused
+    float4 SpotParams;
 };
 
 cbuffer LightBuffer : register(b4)
@@ -68,9 +68,6 @@ cbuffer PointLightBuffer : register(b6)
     float3 PointLightPad;
 }
 
-// UV繰り返し回数。デフォルトは(1,1)(見た目そのまま) -- 大きく引き延ばした
-// Boxが同じテクスチャを繰り返し表示できるようにするためのもの。詳細は
-// renderer.h/renderer.cppのSetUVTiling、box.cppのDraw()参照。
 cbuffer TilingBuffer : register(b7)
 {
     float2 UVTiling;

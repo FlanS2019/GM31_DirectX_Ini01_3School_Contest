@@ -18,7 +18,7 @@ ID3D11Buffer*			Renderer::m_ViewBuffer{};
 ID3D11Buffer*			Renderer::m_ProjectionBuffer{};
 ID3D11Buffer*			Renderer::m_MaterialBuffer{};
 ID3D11Buffer*			Renderer::m_LightBuffer{};
-LIGHT					Renderer::m_CurrentLight{}; // STEP42
+LIGHT					Renderer::m_CurrentLight{}; 
 ID3D11Buffer* Renderer::m_PointLightBuffer{};
 POINT_LIGHT				Renderer::m_PendingPointLights[MAX_POINT_LIGHTS]{};
 int						Renderer::m_PendingPointLightCount = 0;
@@ -373,7 +373,7 @@ void Renderer::SetUVTiling(float U, float V)
 
 void Renderer::SetLight( LIGHT Light )
 {
-	m_CurrentLight = Light; // STEP42: cache so Polygon2D::Draw() can save/restore around its own unlit override
+	m_CurrentLight = Light;
 	m_DeviceContext->UpdateSubresource(m_LightBuffer, 0, NULL, &Light, 0, 0);
 }
 
@@ -398,10 +398,6 @@ void Renderer::CreateVertexShader( ID3D11VertexShader** VertexShader, ID3D11Inpu
 	file = fopen(FileName, "rb");
 	if (!file)
 	{
-		// STEP12: assert() alone is compiled out in Release, so a missing/
-		// misnamed .cso used to fall straight through into _fileno(NULL) and
-		// a garbage-sized new[] -- undefined behaviour that can crash deep
-		// inside the GPU driver instead of failing cleanly here.
 		char buf[512];
 		sprintf_s(buf, "[Renderer] CreateVertexShader: failed to open \"%s\"\n", FileName);
 		OutputDebugStringA(buf);

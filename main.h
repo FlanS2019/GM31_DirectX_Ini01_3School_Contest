@@ -30,8 +30,6 @@ using namespace DirectX;
 #pragma comment (lib, "winmm.lib")
 
 
-// STEP34: 1280x720 -> 1920x1080(x1.5)。既存UIの絶対座標は全部1.5倍
-// してレイアウトを保ったまま拡大してある(各画面のcpp参照)。
 #define SCREEN_WIDTH	(1920)
 #define SCREEN_HEIGHT	(1080)
 
