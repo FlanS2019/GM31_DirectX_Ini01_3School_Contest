@@ -228,7 +228,7 @@ void Renderer::Init()
 	light.Diffuse = XMFLOAT4(1.5f, 1.5f, 1.5f, 1.0f);
 	SetLight(light);
 
-
+	//‚¤‚¢```
 
 	// ƒ}ƒeƒŠƒAƒ‹‰Šú‰»
 	MATERIAL material{};

@@ -1,0 +1,23 @@
+# procedurally generated -- see Switch_Lever.obj
+# Two materials so the mounting plate and the handle read as separate
+# parts. Same Kd+Ke reasoning as the other no-texture props this session:
+# unlitTexturePS only ever shows Kd*(ambient+light)+Ke when there's no
+# texture, so a small Ke keeps both parts visible even in the map's unlit
+# corners.
+newmtl PlateMetal
+Ka 1.000000 1.000000 1.000000
+Kd 0.240000 0.240000 0.270000
+Ks 0.300000 0.300000 0.320000
+Ke 0.020000 0.020000 0.025000
+Ns 60.000000
+d 1.000000
+illum 2
+
+newmtl HandleMetal
+Ka 1.000000 1.000000 1.000000
+Kd 0.480000 0.190000 0.130000
+Ks 0.300000 0.220000 0.180000
+Ke 0.045000 0.018000 0.012000
+Ns 60.000000
+d 1.000000
+illum 2

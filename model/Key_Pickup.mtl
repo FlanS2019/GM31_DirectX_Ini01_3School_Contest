@@ -1,0 +1,14 @@
+# procedurally generated -- see Key_Pickup.obj
+# Same bright golden-orange as the original key.mtl (the box placeholder
+# this replaces), just applied to the actual key-shaped geometry now.
+# Kept deliberately brighter/more saturated than Switch_Key.mtl's antique
+# brass so the two "key-looking" objects (the wall Switch vs. this
+# pickup) still read as visually distinct in-game.
+newmtl KeyGold
+Ka 1.000000 1.000000 1.000000
+Kd 0.850000 0.650000 0.150000
+Ks 0.400000 0.400000 0.400000
+Ke 0.070000 0.055000 0.015000
+Ns 96.000000
+d 1.000000
+illum 2
