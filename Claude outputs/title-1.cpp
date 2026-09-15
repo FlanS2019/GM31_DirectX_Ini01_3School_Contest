@@ -10,12 +10,18 @@
 #include "settingsScreen.h"
 #include "menuSound.h" // STEP27
 #include "titleBgm.h" // STEP28
+#include "titleLogo.h" // STEP40
 void Title::Init()
 {
 	// STEP29: 背景を2DのPolygon2Dから3D背景(カメラ+ライト+床+マップ)に
 	// 変更。操作説明/リザルトと共通化するため実体はMenuBackgroundScene
 	// 側にまとめてあり、ここでは呼ぶだけ(menuBackgroundScene.cpp参照)。
 	MenuBackgroundScene::Init();
+
+	// STEP40: 「廂墅」+英語サブタイトルのロゴ画像(logo_title.png)をフェードインさせる。
+	// 背景(MenuBackgroundScene)のすぐ後に追加することで、グレーフィルター(layer=9)の
+	// 上に重なる(タイトルメニューの文字(layerは技従しないHudDraw)の下、背景の上)。
+	Manager::AddGameObject<TitleLogo>();
 
 	// STEP24: 追加仕様書14項「タイトル画面に設定ボタンを追加」。
 	// 以前はEnterキー1つで即ゲーム開始するだけだったが、選択式の

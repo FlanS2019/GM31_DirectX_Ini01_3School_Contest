@@ -133,9 +133,21 @@ void GameSettings::SetFullscreen(bool fullscreen)
 	HWND hwnd = GetWindow();
 	if (!hwnd) return; // ウィンドウ作成前(あり得ないはずだが念のため)
 
+	// STEP38: 「フルスクリーンを切り替えるとウィンドウが最小化されたまま
+	// 固定されてプレイ不能になる」バグの修正。原因はここの
+	// else側(ウィンドウに戻す方)で、SetWindowPos()のX/Y引数に
+	// CW_USEDEFAULTを渡していたこと -- CW_USEDEFAULTは
+	// CreateWindow(Ex)専用の特殊値(実体はINT_MIN付近の巨大な負数)で、
+	// SetWindowPos()はこれを「本物の座標」としてそのまま解釈してしまう。
+	// 結果、ウィンドウが画面のはるか外(x,y = 約-21億)へ飛ばされて
+	// 実質操作不能になり、それが「最小化されたまま」のように見えていた。
+	// 対策: 実際の座標(プライマリモニタ中央)を計算して渡す。あわせて
+	// 保険としてShowWindow(SW_SHOWNORMAL)も呼び、万一ウィンドウが
+	// 最小化/非表示フラグを持っていても切り替え時に必ず通常表示へ戻す。
 	if (fullscreen)
 	{
 		SetWindowLongPtr(hwnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+		ShowWindow(hwnd, SW_SHOWNORMAL);
 
 		int screenW = GetSystemMetrics(SM_CXSCREEN);
 		int screenH = GetSystemMetrics(SM_CYSCREEN);
@@ -144,10 +156,20 @@ void GameSettings::SetFullscreen(bool fullscreen)
 	else
 	{
 		SetWindowLongPtr(hwnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_VISIBLE);
+		ShowWindow(hwnd, SW_SHOWNORMAL);
 
 		RECT rc = { 0, 0, (LONG)SCREEN_WIDTH, (LONG)SCREEN_HEIGHT };
 		AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-		SetWindowPos(hwnd, HWND_TOP, CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, SWP_FRAMECHANGED | SWP_NOZORDER);
+		int winW = rc.right - rc.left;
+		int winH = rc.bottom - rc.top;
+
+		// STEP38: CW_USEDEFAULTの代わりに、プライマリモニタ中央へ実座標で配置。
+		int screenW = GetSystemMetrics(SM_CXSCREEN);
+		int screenH = GetSystemMetrics(SM_CYSCREEN);
+		int posX = (screenW - winW) / 2;
+		int posY = (screenH - winH) / 2;
+
+		SetWindowPos(hwnd, HWND_TOP, posX, posY, winW, winH, SWP_FRAMECHANGED | SWP_NOZORDER);
 	}
 }
 

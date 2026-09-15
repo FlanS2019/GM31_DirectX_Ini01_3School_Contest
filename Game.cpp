@@ -30,49 +30,24 @@
 #include "gameStats.h" // STEP25
 #include "menuSound.h" // STEP27
 #include "gameStartText.h" // STEP32
+#include "loadingScreen.h" // STEP40
 #include <list>
 
 
 void Game::Init()
 {
-	// STEP25: リザルト画面用の「生還までの時間」「見つけた鍵の数」の
-	// リセット。この下でMap::Init()がKeyを生成するので、その前に必ず
-	// 呼んでおく(gameStats.h参照)。
+	// STEP25: リザルト画面用の「待つまでの時間」「鍵を取った数」を
+	// リセット。LoadingScreenが完了する前にはMap::Init()(Key生成)も
+	// まだ呼ばれていないので、必ずその前に呼んでおく(gameStats.h参照)。
 	GameStats::Reset();
 
-	GameObject* gameObject = nullptr;
-
-	Manager::AddGameObject<Camera>();
-	Manager::AddGameObject<Light>(); // STEP4: scene lighting (dim baseline; see light.h)
-	Manager::AddGameObject<Field>();
-	Manager::AddGameObject<Player>();
-	Manager::AddGameObject<Map>(); // ruins blockout (walls); Field above is still the floor
-	Manager::AddGameObject<Score>(); // AddGameObject<T>() already calls Init() once -- an extra ->Init() here used to run Score::Init() twice (leaked its old vertex buffer/shaders/texture)
-	Manager::AddGameObject<BgmPlayer>();
-	Manager::AddGameObject<Interact>(); // STEP6: interact system (see interact.h)
-
-	// STEP24: 追加仕様書12/13項 -- ESCキーでの一時停止と、そこから開く
-	// 設定画面。どちらも「開かれるまでは何もしない」オーバーレイなので、
-	// ここで一度追加しておけばよい(interact.cppのDrawUI()呼び出し参照)。
-	Manager::AddGameObject<PauseMenu>();
-	Manager::AddGameObject<SettingsScreen>();
-	Manager::AddGameObject<MenuSound>(); // STEP27: メニュー操作音
-	Manager::AddGameObject<Horror>(); // STEP15: heartbeat/vignette/jump scares (see horror.h)
-	Manager::AddGameObject<GameStartText>(); // STEP32: 「ゲームスタート」フェード演出
-
-	// STEP36: 「タイトルでマウスが使えない」対策で、マウスキャプチャは
-	// 既定OFFになった。実際に視点操作が要るのはここGame中だけなので
-	// ここでON。抜けるとき(Game::Uninit())でOFFに戻す。
-	Input::SetMouseCaptureEnabled(true);
-
-	//Box* box = Manager::AddGameObject<Box>();
-	//box->SetPosition({ 2.0f, 0.0f, 5.0f });
-	//box->SetScale({ 2.0f, 2.0f, 2.0f });
-
-	//Manager::AddGameObject<Polygon2D>()->Init(0.0f, 0.0f, 200.0f, 200.0f,L"texture\\jimen.jpg");
-	//Manager::AddGameObject<Grass>()->SetPosition({ 5.0f, 0.0f, 3.0f });
-	//Manager::AddGameObject<Explosion>()->SetPosition({ 0.0f, 0.0f, 5.0f });
-	//Manager::AddGameObject<Bullet>();
+	// STEP40: 以前はここでCamera～GameStartTextの13個を一気に
+	// Manager::AddGameObject<T>()(=呼んだ瞬間にT::Init()を同期実行する -- manager.h参照)
+	// していたため、ローディング中の進捗表示が一切なかった。その13行と
+	// Input::SetMouseCaptureEnabled(true)はすべてloadingScreen.cppの
+	// LoadingScreen::Init()にそのまま移し(順番も同じ)、1フレームで1個ずつ
+	// 実行しながら進捗(%)と現在のステップ名を画面に出せるようにした。
+	Manager::AddGameObject<LoadingScreen>();
 }
 
 void Game::Uninit()

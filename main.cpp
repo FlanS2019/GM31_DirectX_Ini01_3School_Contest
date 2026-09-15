@@ -77,7 +77,27 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	dwExecLastTime = timeGetTime();
 	dwCurrentTime = 0;
 
-
+	// STEP39: 「FPS上限を無制限にすると異常に速くなる」バグの修正。
+	// Manager::Update()やPlayer.cpp/Key.cpp/horror.cpp等、あちこちの
+	// GameObjectが昔からdt=1/60を決め打ちで使っている(実時間を測っていない)。
+	// STEP37までは常にUpdate()とDraw()をセットで「1000/60ms経ったら1回」
+	// だけ呼んでいたので暗黙に60Hz相当になっていたが、FPS上限を「無制限」
+	// にするとこのゲートが外れ、Draw()内部のPresent(1,0)がモニタの
+	// リフレッシュレートに同期してブロックする関係で、144Hzのモニタでは
+	// Update()も144回/秒近く呼ばれてしまい、dt=1/60前提のロジックが
+	// その分(144/60=2.4倍)速く進んでしまっていた。
+	//
+	// 対策: Update()は「固定ステップの蓄積(アキュムレータ)」方式にして、
+	// 実時間がどれだけ経っていても常に1000/60msぶんずつだけ進める
+	// -- ゲームの進行速度がモニタのリフレッシュレートやFPS上限設定と
+	// 完全に無関係になる(全GameObjectのdt=1/60前提はそのまま生かせるので、
+	// 個々のファイルを直す必要が無い)。Draw()側だけがFPS上限設定
+	// (30/60/無制限)に従う -- 無制限の場合はここでは待たず、Present(1,0)
+	// 自体のVSync待ちに任せる(このユーザーの環境なら144Hzで頭打ちになる)。
+	DWORD updateAccumulatorMs = 0;
+	const DWORD kFixedStepMs = 1000 / 60;
+	const DWORD kMaxAccumulatorMs = kFixedStepMs * 5; // 大きく遅延した場合の暴走防止(最大5フレーム分だけ追いつく)
+	DWORD dwLastDrawTime = 0;
 
 	MSG msg;
 	while(1)
@@ -98,19 +118,29 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 		{
 			dwCurrentTime = timeGetTime();
 
-			// STEP37: 追加仕様書のFPS上限設定を実際にここへ反映。
-			// 0=30fps, 1=60fps, 2=無制限(待たずに毎回更新)。設定画面から
-			// 実行中に変更されることもあるので、キャッシュせず毎回
+			DWORD elapsedMs = dwCurrentTime - dwExecLastTime;
+			dwExecLastTime = dwCurrentTime;
+
+			updateAccumulatorMs += elapsedMs;
+			if (updateAccumulatorMs > kMaxAccumulatorMs) updateAccumulatorMs = kMaxAccumulatorMs;
+
+			// ゲームロジックは常に1000/60msぶんずつ、実時間とは切り離して進める。
+			while (updateAccumulatorMs >= kFixedStepMs)
+			{
+				Manager::Update();
+				updateAccumulatorMs -= kFixedStepMs;
+			}
+
+			// 描画だけFPS上限設定(30/60/無制限)に従う。設定画面から実行中に
+			// 変更されることもあるので、キャッシュせず毎回
 			// GameSettings::GetFpsCap()を読みに行く(ただのint取得なので
 			// コストは無視できる)。
 			int fpsCap = GameSettings::GetFpsCap();
-			DWORD frameIntervalMs = (fpsCap == 0) ? (1000 / 30) : (fpsCap == 1) ? (1000 / 60) : 0;
+			DWORD drawIntervalMs = (fpsCap == 0) ? (1000 / 30) : (fpsCap == 1) ? (1000 / 60) : 0;
 
-			if (frameIntervalMs == 0 || (dwCurrentTime - dwExecLastTime) >= frameIntervalMs)
+			if (drawIntervalMs == 0 || (dwCurrentTime - dwLastDrawTime) >= drawIntervalMs)
 			{
-				dwExecLastTime = dwCurrentTime;
-
-				Manager::Update();
+				dwLastDrawTime = dwCurrentTime;
 				Manager::Draw();
 			}
 		}

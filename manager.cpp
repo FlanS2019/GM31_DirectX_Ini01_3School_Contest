@@ -9,6 +9,7 @@
 #include "result.h"
 #include "Game.h"
 #include "gameSettings.h"
+#include "splash.h" // STEP40
 
 std::list<GameObject*> Manager::g_GameObject;//リストを使用する場合は、配列ではなくリストを宣言する必要があります。
 Scene* Manager::m_Scene = nullptr;
@@ -29,7 +30,9 @@ void Manager::Init()
 
 	Renderer::Init();
 	Input::Init();
-	ChangeScene<Title>();
+	// STEP40: 起動直後はいきなりTitleではなく、制作者ロゴスプラッシュ(Splash)を持つ。
+	// SplashはSplashLogo::Update()内で自分でChangeScene<Title>()を呼ぶ(splashLogo.cpp参照)。
+	ChangeScene<Splash>();
 	ChangeScene<result>();
 }
 
