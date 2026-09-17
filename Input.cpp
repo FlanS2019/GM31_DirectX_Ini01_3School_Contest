@@ -15,6 +15,7 @@ bool Input::m_MouseLeftDownPrev = false;
 
 void Input::Init()
 {
+
 	memset(m_OldKeyState, 0, 256);
 	memset(m_PrevKeyState, 0, 256);
 
