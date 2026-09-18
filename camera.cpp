@@ -52,7 +52,7 @@ void Camera::Update()
 void Camera::Draw()
 {
 	XMMATRIX projection = XMMatrixPerspectiveFovLH
-	(1, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 70.0f);
+	(kFovY, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, kNearClip, kFarClip);
 
 	m_ProjectionMatrix = projection;
 

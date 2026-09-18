@@ -10,6 +10,63 @@
 #include "Game.h"
 #include "gameSettings.h"
 #include "splash.h" // STEP40
+#include <cmath> // STEP51: tanf/atanf for the culling cone
+
+namespace
+{
+	// STEP51 (culling): see the big comment in this step's notes -- in short,
+	// this approximates the camera's rectangular frustum with a circular
+	// cone (sized from the WIDER horizontal half-FOV, plus a safety margin,
+	// so the cone always contains the real frustum -- this can only skip
+	// objects that truly can't be visible, never one that actually is).
+	//
+	// Cullable objects are treated as a fixed-radius sphere; kCullRadius is
+	// one map cell's worth of world units (Map.cpp's CELL_SIZE), generous
+	// enough for essentially every prop/decoration in this game. Objects too
+	// big for that (walls, the floor) opt out via GameObject::IsCullable().
+	const float kCullRadius = 4.0f;
+	const float kCullBehindMargin = 4.0f; // extra world units behind the camera plane still treated as "in view"
+	const float kCullHalfFovMargin = 0.35f; // radians (~20 degrees) of slack added on top of the real half-FOV
+
+	float CullHalfFovTan()
+	{
+		// same derivation Camera::Draw() feeds XMMatrixPerspectiveFovLH: the
+		// projection's vertical half-FOV, widened to horizontal by the aspect
+		// ratio (screen is wider than tall, so horizontal is the bigger one).
+		float halfFovY = Camera::kFovY * 0.5f;
+		float halfFovXReal = atanf(tanf(halfFovY) * ((float)SCREEN_WIDTH / (float)SCREEN_HEIGHT));
+		return tanf(halfFovXReal + kCullHalfFovMargin);
+	}
+
+	bool IsOutsideViewCone(Vector3 objectPosition, Vector3 cameraPosition, Vector3 cameraForward)
+	{
+		Vector3 toObject = objectPosition - cameraPosition;
+
+		float forwardDist = Vector3::dot(toObject, cameraForward);
+
+		// well behind the camera -- never visible
+		if (forwardDist < -(kCullRadius + kCullBehindMargin))
+			return true;
+
+		// beyond the far clip plane -- the GPU wouldn't draw it either way
+		if (forwardDist > Camera::kFarClip + kCullRadius)
+			return true;
+
+		float dist2 = Vector3::dot(toObject, toObject);
+
+		// camera is inside (or right next to) the object's bounding sphere -- always draw
+		if (dist2 <= kCullRadius * kCullRadius)
+			return false;
+
+		// lateral offset from the forward axis (Pythagoras on the orthogonal forward/lateral split)
+		float lateral2 = dist2 - forwardDist * forwardDist;
+		if (lateral2 < 0.0f) lateral2 = 0.0f; // guard against float error when forwardDist ~= sqrt(dist2)
+
+		float allowedLateral = forwardDist * CullHalfFovTan() + kCullRadius;
+
+		return lateral2 > allowedLateral * allowedLateral;
+	}
+}
 
 std::list<GameObject*> Manager::g_GameObject;//リストを使用する場合は、配列ではなくリストを宣言する必要があります。
 Scene* Manager::m_Scene = nullptr;
@@ -173,12 +230,18 @@ void Manager::Draw()
 
 	Camera* camera = GetGameObject<Camera>();
 
+	// STEP51: declared here (not inside the `if (camera)` below) so the
+	// culling test in the layer loop further down -- which is outside that
+	// block -- can still read the camera's position/forward from this frame.
+	Vector3 forward;
+	Vector3 position;
+
 	if (camera)
 	{
 		camera->Draw();
 
-		Vector3 forward = camera->GetForward();
-		Vector3 position = camera->GetPosition();
+		forward = camera->GetForward();
+		position = camera->GetPosition();
 
 		for (GameObject* gameObject : g_GameObject)
 		{
@@ -211,6 +274,15 @@ void Manager::Draw()
 			if (gameObject->GetLayer() == layer &&
 				gameObject->GetActive())
 			{
+				// STEP51: skip the Draw() call entirely for objects the
+				// culling test can prove aren't visible. Layer 10 (Direct2D
+				// UI) is never culled -- it isn't camera/world-space at all.
+				if (camera && layer != 10 && gameObject->IsCullable() &&
+					IsOutsideViewCone(gameObject->GetPosition(), position, forward))
+				{
+					continue;
+				}
+
 				gameObject->Draw();
 			}
 		}

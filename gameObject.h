@@ -135,4 +135,10 @@ public:
 	}
 
 	virtual bool UpdatesWhilePaused() const { return false; }
+
+	// STEP51: whether Manager::Draw() is allowed to skip this object's Draw()
+	// call when it's outside the camera's view. Defaults to true (cullable);
+	// large/structural objects (Box, Field) override this to false because a
+	// single fixed-radius sphere can't safely approximate their true size.
+	virtual bool IsCullable() const { return true; }
 };

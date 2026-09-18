@@ -3,6 +3,16 @@
 
 class Camera : public GameObject
 {
+public:
+	// STEP51: named versions of the constants Draw() passes to
+	// XMMatrixPerspectiveFovLH() -- pulled out so the culling code in
+	// manager.cpp can derive its view cone from the SAME numbers instead of
+	// duplicating them (and silently drifting out of sync if the FOV or far
+	// clip is ever retuned).
+	static constexpr float kFovY = 1.0f;     // vertical field of view, radians
+	static constexpr float kNearClip = 0.1f;
+	static constexpr float kFarClip = 70.0f;
+
 protected: 
 	Vector3 m_Target{ 0, 0, 0 };
 

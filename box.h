@@ -21,5 +21,10 @@ public:
 
 	virtual bool IsBlocking() const { return m_Blocking; }
 
+	// STEP51: walls/ceiling/door-frames -- never cull. These are exactly the
+	// large, structural pieces a generic fixed-radius cull sphere can't
+	// safely approximate (see gameObject.h IsCullable()).
+	bool IsCullable() const override { return false; }
+
 	void SetBlocking(bool blocking) { m_Blocking = blocking; }
 };

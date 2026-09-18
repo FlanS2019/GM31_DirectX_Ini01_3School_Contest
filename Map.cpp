@@ -600,7 +600,6 @@ namespace
 			}
 		}
 
-		const float kFrameTopY = 2.175f; // Door_Frame.objの実測高さ(分割スクリプト参照)
 		// STEP: 枠(Door_Frame.obj)の高さは天井まで届かない(実測kFrameTopY)ので、
 		// 枠の上から天井までを塞ぐ「まぐさ(鴨居)」ブロックを追加。これが
 		// ドア上部に隙間が見える不具合の原因だった。厚み軸は袖壁と同じ
@@ -693,6 +692,12 @@ void Map::Init()
 	// 隙間なく繋がった少数の大きなBoxへ変更した(当たり判定・見た目とも
 	// 元の形と完全に同じであることをPythonで検証済み -- SpawnMergedWalls参照)。
 	SpawnMergedWalls();
+
+	// STEP45: 中廊(row3/row4、row7/row8の境界)で、孤立した柱状の壁セル(col4/col7)と、その南北に連なる
+	// SpawnMergedWallsの横長い壁ブロックとの間にできる隙間を塔ぐ。出口扉のフランクで直したSTEP44と同じ
+	// 系統の不具合(ユーザー報告: マップ中廊の柱と横壁の継ぎ目から中に入れてしまう)。SpawnMergedWalls
+	// 本体のロジックは触らず、問題の4箇所の角に既存の壁と十分重なる補強ブロックを置いて塔ぐ。
+	SpawnWallCornerPatches();
 
 	// STEP18: gimmickDoor bug fix -- the main loop below is row-major
 	// (top-to-bottom), and 'X' (row 3, the switch) appears in the grid
