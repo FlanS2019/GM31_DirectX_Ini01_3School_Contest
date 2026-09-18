@@ -7,6 +7,8 @@
 #include "interact.h"
 #include "renderer.h"
 #include "modelRenderer.h"
+#include "audio.h"
+#include "soundManager.h"
 
 namespace
 {
@@ -64,6 +66,11 @@ void Door::Init()
 
 	m_RightLeafRenderer = AddComponent<ModelRenderer>();
 	m_RightLeafRenderer->Load("model\\Door_VAR01\\Door_LeafRight.obj");
+
+	// STEP21: "ドアを開ける音"
+	m_OpenSE = AddComponent<Audio>();
+	m_OpenSE->Load("audio\\SE\\sei_ge_doa_open03.mp3");
+	SoundManager::RegisterSe(m_OpenSE, 1.0f); // STEP24: 設定画面のSE音量スライダーを反映
 }
 
 void Door::Uninit()
@@ -71,6 +78,7 @@ void Door::Uninit()
 	if (m_VertexLayout) { m_VertexLayout->Release(); m_VertexLayout = nullptr; }
 	if (m_VertexShader) { m_VertexShader->Release(); m_VertexShader = nullptr; }
 	if (m_PixelShader) { m_PixelShader->Release(); m_PixelShader = nullptr; }
+	if (m_OpenSE) { SoundManager::Unregister(m_OpenSE); m_OpenSE->Uninit(); }
 }
 
 void Door::Update()
@@ -84,7 +92,6 @@ void Door::Update()
 	if (m_IsExit && !m_ClearTriggered && m_OpenT >= 1.0f)
 	{
 		m_ClearTriggered = true;
-		OutputDebugStringA("[Door] exit opened -- CLEAR!\n");
 		Manager::ChangeScene<result>(0.5f);
 	}
 }
@@ -135,12 +142,15 @@ void Door::Interact()
 	{
 		if (!(player && player->HasKey(m_RequiredKeyId)))
 		{
-			OutputDebugStringA("[Door] locked -- needs a key.\n");
 			Interact::ShowWarning("鍵がかかっている。");
 			return;
 		}
 	}
-	m_Open = true;
+
+	// STEP21: routed through Open() (below) instead of setting m_Open here
+	// directly, so the open SE plays from ONE place shared with
+	// Switch::Interact()'s direct Open() call -- see door.h's Open() comment.
+	Open();
 
 	// STEP14: hotbar "使ったら消える" request -- the key that unlocked this
 	// door is spent now, so drop it from Player's inventory mask; the
@@ -148,4 +158,15 @@ void Door::Interact()
 	// for, so this makes the slot disappear the instant the door opens.
 	if (m_RequiredKeyId >= 0 && player)
 		player->RemoveKey(m_RequiredKeyId);
+}
+
+// STEP21: centralizes "door starts opening" so both a direct player
+// interact (above) and Switch::Interact()'s direct call both get the SE,
+// and neither path can fire it twice -- m_Open guards against a second
+// call restarting the sound (e.g. if Interact() somehow ran again).
+void Door::Open()
+{
+	if (m_Open) return;
+	m_Open = true;
+	if (m_OpenSE) m_OpenSE->Play(false);
 }

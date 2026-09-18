@@ -2,6 +2,7 @@
 #include "main.h"
 #include "renderer.h"
 #include "hud.h"
+#include "gameSettings.h" // STEP48: for SetInternalResolution()'s initial read
 #include <io.h>
 
 
@@ -30,6 +31,20 @@ ID3D11DepthStencilState* Renderer::m_DepthStateDisable{};
 
 ID3D11BlendState*		Renderer::m_BlendState{};
 ID3D11BlendState*		Renderer::m_BlendStateATC{};
+ID3D11BlendState*		Renderer::m_BlendStateOpaque{}; // STEP49
+
+// STEP48
+ID3D11Texture2D*          Renderer::m_SceneColorTexture{};
+ID3D11RenderTargetView*   Renderer::m_SceneRenderTargetView{};
+ID3D11ShaderResourceView* Renderer::m_SceneShaderResourceView{};
+ID3D11Texture2D*          Renderer::m_SceneDepthTexture{};
+ID3D11DepthStencilView*   Renderer::m_SceneDepthStencilView{};
+int                       Renderer::m_RenderWidth = 0;
+int                       Renderer::m_RenderHeight = 0;
+ID3D11Buffer*             Renderer::m_BlitVertexBuffer{};
+ID3D11VertexShader*       Renderer::m_BlitVertexShader{};
+ID3D11InputLayout*        Renderer::m_BlitVertexLayout{};
+ID3D11PixelShader*        Renderer::m_BlitPixelShader{};
 
 
 
@@ -147,6 +162,22 @@ void Renderer::Init()
 	blendDesc.AlphaToCoverageEnable = TRUE;
 	m_Device->CreateBlendState( &blendDesc, &m_BlendStateATC );
 
+	// STEP49: opaque variant for BlitSceneToBackBuffer() -- that pass must
+	// fully replace the backbuffer, never blend with whatever was left in
+	// it from a previous frame.
+	D3D11_BLEND_DESC opaqueBlendDesc{};
+	opaqueBlendDesc.AlphaToCoverageEnable = FALSE;
+	opaqueBlendDesc.IndependentBlendEnable = FALSE;
+	opaqueBlendDesc.RenderTarget[0].BlendEnable = FALSE;
+	opaqueBlendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+	opaqueBlendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_ZERO;
+	opaqueBlendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	opaqueBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	opaqueBlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	opaqueBlendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	opaqueBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	m_Device->CreateBlendState( &opaqueBlendDesc, &m_BlendStateOpaque );
+
 	float blendFactor[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 	m_DeviceContext->OMSetBlendState(m_BlendState, blendFactor, 0xffffffff );
 
@@ -240,6 +271,50 @@ void Renderer::Init()
 	// タイリングもデフォルト(1,1)で初期化 -- box.cpp以外は常にこのまま
 	SetUVTiling(1.0f, 1.0f);
 
+	// STEP48: build the fullscreen blit quad once, reusing the existing
+	// unlit-texture shader pair (same setup Polygon2D::Init() already uses
+	// for its own screen-space rectangles) -- no new .cso needed.
+	CreateVertexShader(&m_BlitVertexShader, &m_BlitVertexLayout, "shader\\unlitTextureVS.cso");
+	CreatePixelShader(&m_BlitPixelShader, "shader\\unlitTexturePS.cso");
+
+	{
+		VERTEX_3D quad[4];
+		quad[0].Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		quad[0].Normal = XMFLOAT3(0.0f, 0.0f, -1.0f);
+		quad[0].Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		quad[0].TexCoord = XMFLOAT2(0.0f, 0.0f);
+
+		quad[1].Position = XMFLOAT3((float)SCREEN_WIDTH, 0.0f, 0.0f);
+		quad[1].Normal = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		quad[1].Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		quad[1].TexCoord = XMFLOAT2(1.0f, 0.0f);
+
+		quad[2].Position = XMFLOAT3(0.0f, (float)SCREEN_HEIGHT, 0.0f);
+		quad[2].Normal = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		quad[2].Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		quad[2].TexCoord = XMFLOAT2(0.0f, 1.0f);
+
+		quad[3].Position = XMFLOAT3((float)SCREEN_WIDTH, (float)SCREEN_HEIGHT, 0.0f);
+		quad[3].Normal = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		quad[3].Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		quad[3].TexCoord = XMFLOAT2(1.0f, 1.0f);
+
+		D3D11_BUFFER_DESC bd{};
+		bd.Usage = D3D11_USAGE_DEFAULT;
+		bd.ByteWidth = sizeof(VERTEX_3D) * 4;
+		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+
+		D3D11_SUBRESOURCE_DATA sd{};
+		sd.pSysMem = quad;
+		m_Device->CreateBuffer(&bd, &sd, &m_BlitVertexBuffer);
+	}
+
+	// STEP48: build the first offscreen scene target from whatever
+	// resolution settings.ini already loaded (GameSettings::Init() already
+	// ran by this point -- see manager.cpp).
+	SetInternalResolution(GameSettings::GetResolutionIndex());
+
 	Hud::Init();
 }
 
@@ -257,6 +332,18 @@ void Renderer::Uninit()
 	m_PointLightBuffer->Release();
 	m_TilingBuffer->Release();
 
+	// STEP48
+	if (m_BlendStateOpaque) { m_BlendStateOpaque->Release(); m_BlendStateOpaque = nullptr; }
+	if (m_BlitVertexBuffer) { m_BlitVertexBuffer->Release(); m_BlitVertexBuffer = nullptr; }
+	if (m_BlitVertexLayout) { m_BlitVertexLayout->Release(); m_BlitVertexLayout = nullptr; }
+	if (m_BlitVertexShader) { m_BlitVertexShader->Release(); m_BlitVertexShader = nullptr; }
+	if (m_BlitPixelShader) { m_BlitPixelShader->Release(); m_BlitPixelShader = nullptr; }
+	if (m_SceneShaderResourceView) { m_SceneShaderResourceView->Release(); m_SceneShaderResourceView = nullptr; }
+	if (m_SceneRenderTargetView) { m_SceneRenderTargetView->Release(); m_SceneRenderTargetView = nullptr; }
+	if (m_SceneColorTexture) { m_SceneColorTexture->Release(); m_SceneColorTexture = nullptr; }
+	if (m_SceneDepthStencilView) { m_SceneDepthStencilView->Release(); m_SceneDepthStencilView = nullptr; }
+	if (m_SceneDepthTexture) { m_SceneDepthTexture->Release(); m_SceneDepthTexture = nullptr; }
+
 	m_DeviceContext->ClearState();
 	m_RenderTargetView->Release();
 	m_SwapChain->Release();
@@ -270,9 +357,24 @@ void Renderer::Uninit()
 
 void Renderer::Begin()
 {
+	// STEP48: the 3D scene now draws into the offscreen scene target (at
+	// the internal render resolution), not the real backbuffer directly.
+	// BlitSceneToBackBuffer() later stretches it onto the real backbuffer
+	// at window size, right before layer 10 (Hud + menus) -- see manager.cpp.
+	m_DeviceContext->OMSetRenderTargets(1, &m_SceneRenderTargetView, m_SceneDepthStencilView);
+
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	m_DeviceContext->ClearRenderTargetView(m_RenderTargetView, clearColor);
-	m_DeviceContext->ClearDepthStencilView(m_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	m_DeviceContext->ClearRenderTargetView(m_SceneRenderTargetView, clearColor);
+	m_DeviceContext->ClearDepthStencilView(m_SceneDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+	D3D11_VIEWPORT sceneViewport{};
+	sceneViewport.Width = (FLOAT)m_RenderWidth;
+	sceneViewport.Height = (FLOAT)m_RenderHeight;
+	sceneViewport.MinDepth = 0.0f;
+	sceneViewport.MaxDepth = 1.0f;
+	sceneViewport.TopLeftX = 0.0f;
+	sceneViewport.TopLeftY = 0.0f;
+	m_DeviceContext->RSSetViewports(1, &sceneViewport);
 
 	struct POINT_LIGHT_BUFFER
 	{
@@ -320,6 +422,155 @@ void Renderer::SetATCEnable( bool Enable )
 	else
 		m_DeviceContext->OMSetBlendState(m_BlendState, blendFactor, 0xffffffff);
 
+}
+
+// STEP48: resolutionIndex (0=144p,1=360p,2=480p,3=1080p,4=4K) -> pixel size.
+// 144p/360p/1080p/4K are exact 16:9. 480p alone uses YouTube's own 854x480,
+// which is only ~0.07% off exact 16:9 (853.33...) -- not visible.
+namespace
+{
+	const int kResolutionWidths[5] = { 256, 640, 854, 1920, 3840 };
+	const int kResolutionHeights[5] = { 144, 360, 480, 1080, 2160 };
+}
+
+void Renderer::SetInternalResolution(int resolutionIndex)
+{
+	int index = resolutionIndex;
+	if (index < 0) index = 0;
+	if (index > 4) index = 4;
+
+	int width = kResolutionWidths[index];
+	int height = kResolutionHeights[index];
+
+	if (width == m_RenderWidth && height == m_RenderHeight && m_SceneRenderTargetView)
+		return; // already at this resolution -- nothing to rebuild
+
+	// STEP50: unbind the old scene render target / depth-stencil / shader
+	// resource from the pipeline (Begin() and BlitSceneToBackBuffer() both
+	// bind these every frame) and flush, so the GPU is done with them
+	// before they're released and replaced below -- otherwise a second
+	// resolution change in the same session can land on top of a pipeline
+	// slot the driver hasn't fully settled from the first change yet.
+	{
+		ID3D11RenderTargetView* nullRTV = nullptr;
+		ID3D11ShaderResourceView* nullSRV = nullptr;
+		m_DeviceContext->OMSetRenderTargets(1, &nullRTV, nullptr);
+		m_DeviceContext->PSSetShaderResources(0, 1, &nullSRV);
+		m_DeviceContext->Flush();
+	}
+
+	if (m_SceneShaderResourceView) { m_SceneShaderResourceView->Release(); m_SceneShaderResourceView = nullptr; }
+	if (m_SceneRenderTargetView) { m_SceneRenderTargetView->Release(); m_SceneRenderTargetView = nullptr; }
+	if (m_SceneColorTexture) { m_SceneColorTexture->Release(); m_SceneColorTexture = nullptr; }
+	if (m_SceneDepthStencilView) { m_SceneDepthStencilView->Release(); m_SceneDepthStencilView = nullptr; }
+	if (m_SceneDepthTexture) { m_SceneDepthTexture->Release(); m_SceneDepthTexture = nullptr; }
+
+	D3D11_TEXTURE2D_DESC colorDesc{};
+	colorDesc.Width = width;
+	colorDesc.Height = height;
+	colorDesc.MipLevels = 1;
+	colorDesc.ArraySize = 1;
+	colorDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	colorDesc.SampleDesc.Count = 1;
+	colorDesc.SampleDesc.Quality = 0;
+	colorDesc.Usage = D3D11_USAGE_DEFAULT;
+	colorDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	colorDesc.CPUAccessFlags = 0;
+	colorDesc.MiscFlags = 0;
+	m_Device->CreateTexture2D(&colorDesc, nullptr, &m_SceneColorTexture);
+	m_Device->CreateRenderTargetView(m_SceneColorTexture, nullptr, &m_SceneRenderTargetView);
+	m_Device->CreateShaderResourceView(m_SceneColorTexture, nullptr, &m_SceneShaderResourceView);
+
+	D3D11_TEXTURE2D_DESC depthDesc{};
+	depthDesc.Width = width;
+	depthDesc.Height = height;
+	depthDesc.MipLevels = 1;
+	depthDesc.ArraySize = 1;
+	depthDesc.Format = DXGI_FORMAT_D16_UNORM;
+	depthDesc.SampleDesc.Count = 1;
+	depthDesc.SampleDesc.Quality = 0;
+	depthDesc.Usage = D3D11_USAGE_DEFAULT;
+	depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depthDesc.CPUAccessFlags = 0;
+	depthDesc.MiscFlags = 0;
+	m_Device->CreateTexture2D(&depthDesc, nullptr, &m_SceneDepthTexture);
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+	dsvDesc.Format = depthDesc.Format;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	dsvDesc.Flags = 0;
+	m_Device->CreateDepthStencilView(m_SceneDepthTexture, &dsvDesc, &m_SceneDepthStencilView);
+
+	m_RenderWidth = width;
+	m_RenderHeight = height;
+}
+
+// STEP48: called once per frame from manager.cpp's Draw(), right before
+// layer 10 (Hud + all menus) draws. Stretches the offscreen scene texture
+// (m_SceneShaderResourceView) onto the real backbuffer (m_RenderTargetView).
+// Everything drawn after this (Hud::Begin() etc.) lands on top at native
+// window resolution, so text/UI never gets soft.
+void Renderer::BlitSceneToBackBuffer()
+{
+	m_DeviceContext->OMSetRenderTargets(1, &m_RenderTargetView, nullptr);
+
+	// STEP49: the real backbuffer is never cleared anywhere else now (Begin()
+	// clears the offscreen scene target instead), and this blit used to draw
+	// with alpha blending still enabled -- so any pixel that wasn't fully
+	// opaque in the scene texture let old backbuffer content (a previous
+	// frame's HUD text, stale swap-chain contents, ...) show through. Clear
+	// it explicitly, and force fully opaque below, so that can't happen.
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	m_DeviceContext->ClearRenderTargetView(m_RenderTargetView, clearColor);
+
+	float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	m_DeviceContext->OMSetBlendState(m_BlendStateOpaque, blendFactor, 0xffffffff);
+
+	D3D11_VIEWPORT windowViewport{};
+	windowViewport.Width = (FLOAT)SCREEN_WIDTH;
+	windowViewport.Height = (FLOAT)SCREEN_HEIGHT;
+	windowViewport.MinDepth = 0.0f;
+	windowViewport.MaxDepth = 1.0f;
+	windowViewport.TopLeftX = 0.0f;
+	windowViewport.TopLeftY = 0.0f;
+	m_DeviceContext->RSSetViewports(1, &windowViewport);
+
+	// Same reasoning as Polygon2D::Draw() (STEP42): unlitTexturePS.hlsl
+	// still applies the scene's current lighting despite its name when
+	// Light.Enable==true, so this quad temporarily disables lighting for
+	// its one draw call and restores it right after.
+	LIGHT savedLight = m_CurrentLight;
+	LIGHT unlitLight{};
+	SetLight(unlitLight);
+
+	m_DeviceContext->IASetInputLayout(m_BlitVertexLayout);
+	m_DeviceContext->VSSetShader(m_BlitVertexShader, NULL, 0);
+	m_DeviceContext->PSSetShader(m_BlitPixelShader, NULL, 0);
+
+	m_DeviceContext->PSSetShaderResources(0, 1, &m_SceneShaderResourceView);
+
+	SetWorldViewProjection2D();
+	SetWorldMatrix(XMMatrixIdentity());
+
+	MATERIAL material{};
+	material.Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	material.TextureEnable = TRUE;
+	SetMaterial(material);
+
+	UINT stride = sizeof(VERTEX_3D);
+	UINT offset = 0;
+	m_DeviceContext->IASetVertexBuffers(0, 1, &m_BlitVertexBuffer, &stride, &offset);
+	m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+	m_DeviceContext->Draw(4, 0);
+
+	SetLight(savedLight);
+
+	// STEP49: restore the normal alpha-blend state -- next frame's scene
+	// pass (trees/windows/decorations etc. that rely on blending) must see
+	// exactly the same blend state Init() originally set up, not the opaque
+	// one this draw just used.
+	m_DeviceContext->OMSetBlendState(m_BlendState, blendFactor, 0xffffffff);
 }
 
 void Renderer::SetWorldViewProjection2D()
@@ -402,9 +653,6 @@ void Renderer::CreateVertexShader( ID3D11VertexShader** VertexShader, ID3D11Inpu
 		// misnamed .cso used to fall straight through into _fileno(NULL) and
 		// a garbage-sized new[] -- undefined behaviour that can crash deep
 		// inside the GPU driver instead of failing cleanly here.
-		char buf[512];
-		sprintf_s(buf, "[Renderer] CreateVertexShader: failed to open \"%s\"\n", FileName);
-		OutputDebugStringA(buf);
 		assert(file);
 		*VertexShader = nullptr;
 		*VertexLayout = nullptr;
@@ -447,9 +695,6 @@ void Renderer::CreatePixelShader( ID3D11PixelShader** PixelShader, const char* F
 	file = fopen(FileName, "rb");
 	if (!file)
 	{
-		char buf[512];
-		sprintf_s(buf, "[Renderer] CreatePixelShader: failed to open \"%s\"\n", FileName);
-		OutputDebugStringA(buf);
 		assert(file);
 		*PixelShader = nullptr;
 		return;

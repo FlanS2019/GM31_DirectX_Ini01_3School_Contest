@@ -206,12 +206,6 @@ void ModelRenderer::LoadObj( const char *FileName, MODEL_OBJ *ModelObj )
 
 	FILE *file;
 	file = fopen( FileName, "rt" );
-	if (!file)
-	{
-		char buf[512];
-		sprintf_s(buf, "[ModelRenderer] LoadObj: fopen FAILED for \"%s\"\n", FileName);
-		OutputDebugStringA(buf);
-	}
 	assert(file);
 
 
@@ -226,6 +220,8 @@ void ModelRenderer::LoadObj( const char *FileName, MODEL_OBJ *ModelObj )
 
 		if( str[0] == '#' )
 		{
+			// STEP14: コメント行は行末まで読み飛ばす(LoadMaterialと同じ理由 -- コメント文に
+			// キーワードと同じ単語が出てくると誤動作するのを防ぐ)。
 			int cch;
 			do
 			{
@@ -310,6 +306,7 @@ void ModelRenderer::LoadObj( const char *FileName, MODEL_OBJ *ModelObj )
 
 		if( str[0] == '#' )
 		{
+			// STEP14: コメント行を読み飛ばす(理由は上のカウント処理と同じ)。
 			int cch;
 			do
 			{
@@ -458,12 +455,6 @@ void ModelRenderer::LoadMaterial( const char *FileName, MODEL_MATERIAL **Materia
 
 	FILE *file;
 	file = fopen( FileName, "rt" );
-	if (!file)
-	{
-		char buf[512];
-		sprintf_s(buf, "[ModelRenderer] LoadMaterial: fopen FAILED for \"%s\"\n", FileName);
-		OutputDebugStringA(buf);
-	}
 	assert(file);
 
 	MODEL_MATERIAL *materialArray;
@@ -478,6 +469,13 @@ void ModelRenderer::LoadMaterial( const char *FileName, MODEL_MATERIAL **Materia
 			break;
 
 
+		// STEP14: コメント行("#"で始まる)は行末までまとめて読み飛ばす。
+		// この読み込みは空白区切りの1トークンずつ調べているだけなので、コメント文の中に
+		// "map_Kd"や"Ke"のような単語がそのまま出てくると本物のディレクティブと誤認して
+		// しまう(このプロジェクト自身の.mtlに書いた説明コメントで実際に発生した)。
+		// newmtlより前でこれが起きるとmcがまだ-1のままmaterialArray[mc]へ書き込むことになり、
+		// 確保前のメモリを壊すヒープ破壊バグになる -- LoadObj内のdelete[]で検出された
+		// ヒープ破壊はこれが原因だった。
 		if( str[0] == '#' )
 		{
 			int cch;
@@ -513,6 +511,7 @@ void ModelRenderer::LoadMaterial( const char *FileName, MODEL_MATERIAL **Materia
 
 		if( str[0] == '#' )
 		{
+			// STEP14: コメント行を読み飛ばす(理由は上のカウント処理と同じ)。
 			int cch;
 			do
 			{

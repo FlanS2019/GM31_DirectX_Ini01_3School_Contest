@@ -86,10 +86,6 @@ void Item::Interact()
 
 	m_Collected = true;
 	SetDestroy(true); // picked up -- remove from the world, same as Key's old auto-pickup did
-
-	char buf[96];
-	sprintf_s(buf, "[Item] picked up: %s (id=%d)\n", m_DisplayName, m_ItemId);
-	OutputDebugStringA(buf);
 }
 
 void Item::Draw()

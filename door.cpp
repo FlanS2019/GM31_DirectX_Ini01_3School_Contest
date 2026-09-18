@@ -31,6 +31,18 @@ namespace
 		return rot * trans;
 	}
 
+	// STEP: 扉(LeafLeft/LeafRight)のローカル座標には、分割時に枠の中心を
+	// 原点に揃えた都合上、蝶番(ヒンジ)位置ぶんのオフセットがすでに
+	// 焼き込まれている。以前はBuildWorld()と同じ「回転してから平行移動」
+	// だけで描いていたため、そのオフセットが二重にかかってしまい、
+	// leafAngle=0(閉じているはず)の状態でも扉が本来の位置・向きから
+	// 大きくズレて描画されていた -- これが「ドアが常に開いて見える」
+	// 「開く方向がおかしい」の原因。
+	// 正しい蝶番回転は「ヒンジをいったん原点に戻す平行移動 -> 追加角度
+	// ぶん回転 -> 回転後のワールド上のヒンジ位置へ平行移動」の3段階。
+	// こうすると leafAngle=0 のときはBuildWorld(baseYaw, basePos)と
+	// ぴったり同じ変換になり(=枠と同じ平面に収まる=閉じて見える)、
+	// leafAngle!=0 のときはヒンジを軸に正しく開閉するようになる。
 	XMMATRIX BuildLeafWorld(float hingeLocalX, float baseYaw, float leafAngle, const Vector3& basePos)
 	{
 		XMMATRIX preTrans = XMMatrixTranslation(-hingeLocalX, 0.0f, 0.0f);
@@ -55,9 +67,10 @@ void Door::Init()
 	m_RightLeafRenderer = AddComponent<ModelRenderer>();
 	m_RightLeafRenderer->Load("model\\Door_VAR01\\Door_LeafRight.obj");
 
+	// STEP21: "ドアを開ける音"
 	m_OpenSE = AddComponent<Audio>();
 	m_OpenSE->Load("audio\\SE\\sei_ge_doa_open03.mp3");
-	SoundManager::RegisterSe(m_OpenSE, 1.0f);
+	SoundManager::RegisterSe(m_OpenSE, 1.0f); // STEP24: 設定画面のSE音量スライダーを反映
 }
 
 void Door::Uninit()
@@ -79,7 +92,6 @@ void Door::Update()
 	if (m_IsExit && !m_ClearTriggered && m_OpenT >= 1.0f)
 	{
 		m_ClearTriggered = true;
-		OutputDebugStringA("[Door] exit opened -- CLEAR!\n");
 		Manager::ChangeScene<result>(0.5f);
 	}
 }
@@ -97,6 +109,9 @@ void Door::Draw()
 	Renderer::SetWorldMatrix(frameWorld);
 	m_FrameRenderer->Draw();
 
+	// STEP: 開く方向がおかしいと言われたため、以前と符号を反転(奥に
+	// 開く向きへ)。まだ逆だったら、この2行の符号をもう一度反転するだけ
+	// で直る。
 	float leafAngle = -(m_OpenT * (kOpenAngleDeg * (XM_PI / 180.0f)));
 
 	XMMATRIX leftWorld = BuildLeafWorld(kLeftHingeX, baseYaw, leafAngle, basePos);
@@ -127,18 +142,28 @@ void Door::Interact()
 	{
 		if (!(player && player->HasKey(m_RequiredKeyId)))
 		{
-			OutputDebugStringA("[Door] locked -- needs a key.\n");
 			Interact::ShowWarning("鍵がかかっている。");
 			return;
 		}
 	}
 
+	// STEP21: routed through Open() (below) instead of setting m_Open here
+	// directly, so the open SE plays from ONE place shared with
+	// Switch::Interact()'s direct Open() call -- see door.h's Open() comment.
 	Open();
 
+	// STEP14: hotbar "使ったら消える" request -- the key that unlocked this
+	// door is spent now, so drop it from Player's inventory mask; the
+	// hotbar in interact.cpp only draws ids HasKey() still returns true
+	// for, so this makes the slot disappear the instant the door opens.
 	if (m_RequiredKeyId >= 0 && player)
 		player->RemoveKey(m_RequiredKeyId);
 }
 
+// STEP21: centralizes "door starts opening" so both a direct player
+// interact (above) and Switch::Interact()'s direct call both get the SE,
+// and neither path can fire it twice -- m_Open guards against a second
+// call restarting the sound (e.g. if Interact() somehow ran again).
 void Door::Open()
 {
 	if (m_Open) return;

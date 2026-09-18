@@ -18,19 +18,9 @@ namespace
 	ID2D1SolidColorBrush* g_TextBrush = nullptr;
 	ID2D1SolidColorBrush* g_ShadowBrush = nullptr;
 	ID2D1SolidColorBrush* g_PanelBrush = nullptr;
-	ID2D1RadialGradientBrush* g_VignetteBrush = nullptr; 
+	ID2D1RadialGradientBrush* g_VignetteBrush = nullptr; // STEP15 -- see Hud::DrawVignette()
 
-	bool g_Ready = false;
-}
-
-namespace
-{
-	void LogHudInitFailure(const char* step, HRESULT hr)
-	{
-		char buf[160];
-		sprintf_s(buf, "[Hud] Init FAILED at %s (hr=0x%08X) -- on-screen prompt will never draw.\n", step, (unsigned int)hr);
-		OutputDebugStringA(buf);
-	}
+	bool g_Ready = false; // stays false (DrawText becomes a silent no-op) if any of the setup below fails
 }
 
 void Hud::Init()
@@ -38,11 +28,11 @@ void Hud::Init()
 	HRESULT hr;
 
 	hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &g_D2DFactory);
-	if (FAILED(hr)) { LogHudInitFailure("D2D1CreateFactory", hr); return; }
+	if (FAILED(hr)) return;
 
 	IDXGISurface* backBufferSurface = nullptr;
 	hr = Renderer::GetSwapChain()->GetBuffer(0, __uuidof(IDXGISurface), (void**)&backBufferSurface);
-	if (FAILED(hr)) { LogHudInitFailure("GetBuffer(IDXGISurface)", hr); return; }
+	if (FAILED(hr)) return;
 
 	D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties(
 		D2D1_RENDER_TARGET_TYPE_DEFAULT,
@@ -50,16 +40,16 @@ void Hud::Init()
 
 	hr = g_D2DFactory->CreateDxgiSurfaceRenderTarget(backBufferSurface, &props, &g_D2DRenderTarget);
 	backBufferSurface->Release();
-	if (FAILED(hr)) { LogHudInitFailure("CreateDxgiSurfaceRenderTarget", hr); return; }
+	if (FAILED(hr)) return;
 
 	hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&g_DWriteFactory);
-	if (FAILED(hr)) { LogHudInitFailure("DWriteCreateFactory", hr); return; }
+	if (FAILED(hr)) return;
 
 	hr = g_DWriteFactory->CreateTextFormat(
 		L"MS Gothic", nullptr,
 		DWRITE_FONT_WEIGHT_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
 		22.0f, L"ja-jp", &g_TextFormat);
-	if (FAILED(hr)) { LogHudInitFailure("CreateTextFormat", hr); return; }
+	if (FAILED(hr)) return;
 
 	g_TextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
 	g_TextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
@@ -68,6 +58,10 @@ void Hud::Init()
 	g_D2DRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &g_ShadowBrush);
 	g_D2DRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black, 0.55f), &g_PanelBrush);
 
+	// STEP15: vignette brush -- built once here, reused every frame by
+	// DrawVignette(). Non-fatal if this fails (g_VignetteBrush just stays
+	// null and DrawVignette() silently no-ops) -- the rest of the HUD
+	// (prompts/hotbar) doesn't depend on it.
 	{
 		D2D1_GRADIENT_STOP gradStops[2] = {};
 		gradStops[0].position = 0.0f;
@@ -89,7 +83,6 @@ void Hud::Init()
 	}
 
 	g_Ready = true;
-	OutputDebugStringA("[Hud] Init OK\n");
 }
 
 void Hud::Uninit()
@@ -116,29 +109,11 @@ void Hud::End()
 {
 	if (!g_Ready) return;
 
-	HRESULT hr = g_D2DRenderTarget->EndDraw();
-
-	if (FAILED(hr))
-	{
-		char buf[128];
-		sprintf_s(buf, "[Hud] EndDraw failed (0x%08X) -- HUD text may stop updating.\n", (unsigned int)hr);
-		OutputDebugStringA(buf);
-	}
+	g_D2DRenderTarget->EndDraw();
 }
 
 void Hud::DrawText(const char* text, float x, float y, float size, bool centered)
 {
-	if (!g_Ready)
-	{
-		static bool loggedOnce = false;
-		if (!loggedOnce)
-		{
-			OutputDebugStringA("[Hud] DrawText called but Hud is not ready (Init() failed earlier) -- nothing will draw.\n");
-			loggedOnce = true;
-		}
-		return;
-	}
-
 	if (!g_Ready || !text || !text[0]) return;
 
 	int wlen = MultiByteToWideChar(CP_ACP, 0, text, -1, nullptr, 0);
@@ -203,6 +178,9 @@ void Hud::DrawTextAlpha(const char* text, float x, float y, float size, bool cen
 
 	float left = centered ? (x - metrics.width * 0.5f) : x;
 
+	// STEP32: g_TextBrush/g_ShadowBrushは他のDrawText()呼び出しとも共有
+	// しているstaticなブラシなので、ここで変えた不透明度は描画後に必ず
+	// 1.0へ戻す(でないと同じフレーム内の他のテキストまで薄くなる)。
 	g_TextBrush->SetOpacity(alpha);
 	g_ShadowBrush->SetOpacity(alpha);
 

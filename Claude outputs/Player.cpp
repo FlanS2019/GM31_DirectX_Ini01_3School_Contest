@@ -13,49 +13,11 @@
 #include "audio.h"
 #include "soundManager.h"
 #include "shadow.h"
-#include "Score.h"
-#include <cstdio>
 
-namespace
-{
-	// increments once per Player::Update call -- lets the debug log show
-	// whether two [COLLIDE] lines happened in the SAME frame or several
-	// frames apart, which the old log (no frame number) couldn't tell you.
-	unsigned s_DebugFrame = 0;
-
-	// DEBUG: writes every log line to a file (in addition to
-	// OutputDebugStringA) so it survives independent of when the VS Output
-	// window gets copied -- that window's content is only good until the
-	// next F5, so a video from one run and a log copied after starting the
-	// next run don't actually match. This file is truncated fresh at the
-	// start of each run (Player::Init) and every line is flushed
-	// immediately, so whatever's in it after closing the game is exactly
-	// that run's log, however it ends (including a crash). It lands next to
-	// the other relative paths this project already uses (model\\...,
-	// shader\\...), i.e. wherever the .exe's working directory is -- same
-	// place, every run.
-	FILE* s_DebugLogFile = nullptr;
-
-	void DebugLog(const char* text)
-	{
-		OutputDebugStringA(text);
-		if (s_DebugLogFile)
-		{
-			fputs(text, s_DebugLogFile);
-			fflush(s_DebugLogFile);
-		}
-	}
-}
 
 void Player::Init()
 {
 	m_Layer = 8;
-
-	// DEBUG: fresh log file every run -- see DebugLog() above.
-	if (!s_DebugLogFile)
-	{
-		fopen_s(&s_DebugLogFile, "debug_log.txt", "w");
-	}
 
 	m_Position = { 0, 0, 0 }; // start position
 
@@ -109,16 +71,6 @@ void Player::PlayPickupSE()
 
 void Player::Update()
 {
-	s_DebugFrame++;
-
-	{
-		Score* score = Manager::GetGameObject<Score>();
-		if (score)
-		{
-			score->SetValue(s_DebugFrame % 10000);
-		}
-	}
-
 	// fixed-step dt (fine for a school-contest build; swap for a real delta time later)
 	float dt = 1.0f / 60.0f;
 
@@ -255,8 +207,6 @@ void Player::Update()
 		}
 	}
 
-	Vector3 debugPosBeforeMove = m_Position;
-
 	// integrate velocity into position
 	m_Position.x += m_Velocity.x * dt;
 	m_Position.y += m_Velocity.y * dt;
@@ -334,20 +284,6 @@ void Player::Update()
 
 		const float pushClearance = 0.3f;
 
-		// --- DEBUG: print exactly what this collision event did, with a
-		// frame number so consecutive lines can be told apart as same-frame
-		// vs different-frame.
-		{
-			char buf[256];
-			sprintf_s(buf,
-				"[COLLIDE] frame=%u pass=%d box=%p boxPos=(%.2f,%.2f,%.2f) boxScale=(%.2f,%.2f,%.2f) playerPos=(%.2f,%.2f,%.2f) pen=%.3f pick=%c\n",
-				s_DebugFrame, pass, (void*)bestBox, bestBoxPos.x, bestBoxPos.y, bestBoxPos.z,
-				bestBoxScale.x, bestBoxScale.y, bestBoxScale.z,
-				m_Position.x, m_Position.y, m_Position.z,
-				bestPen, bestAxis);
-			DebugLog(buf);
-		}
-
 		if (bestAxis == 'X')
 		{
 			if (m_Position.x < bestBoxPos.x)
@@ -370,29 +306,9 @@ void Player::Update()
 		const float maxSanePush = 3.0f;
 		if (pushDist > maxSanePush)
 		{
-			char buf[256];
-			sprintf_s(buf,
-				"[SUSPICIOUS PUSH] frame=%u collision moved %.2f units in one frame: (%.2f,%.2f,%.2f) -> (%.2f,%.2f,%.2f) -- reverted\n",
-				s_DebugFrame, pushDist, prePush.x, prePush.y, prePush.z, m_Position.x, m_Position.y, m_Position.z);
-			DebugLog(buf);
-
 			m_Position = prePush;
 			m_Velocity.x = 0.0f;
 			m_Velocity.z = 0.0f;
-		}
-	}
-
-	{
-		Vector3 debugDelta = m_Position - debugPosBeforeMove;
-		float debugJump = debugDelta.length();
-		if (debugJump > 1.0f)
-		{
-			char buf[256];
-			sprintf_s(buf,
-				"[JUMP DETECTED] frame=%u moved %.2f units in one frame: (%.2f,%.2f,%.2f) -> (%.2f,%.2f,%.2f)\n",
-				s_DebugFrame, debugJump, debugPosBeforeMove.x, debugPosBeforeMove.y, debugPosBeforeMove.z,
-				m_Position.x, m_Position.y, m_Position.z);
-			DebugLog(buf);
 		}
 	}
 
@@ -413,13 +329,6 @@ void Player::Update()
 	Vector3 shadowPos = m_Position;
 	shadowPos.y = 0.05f;
 	m_Shadow->SetPosition(shadowPos);
-
-	{
-		char buf[128];
-		sprintf_s(buf, "[POS] frame=%u pos=(%.2f,%.2f,%.2f)\n",
-			s_DebugFrame, m_Position.x, m_Position.y, m_Position.z);
-		DebugLog(buf);
-	}
 
 	GameObject::Update();
 }

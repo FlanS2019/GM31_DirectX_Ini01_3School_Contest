@@ -7,6 +7,7 @@ void Polygon2D::Init(float x,float y, float width, float Height, const WCHAR* Te
 {
 	m_Layer = 9;
 
+	// STEP40: Draw()が毎フレームこの値で頂点バッファを作り直すので保存しておく。
 	m_X = x;
 	m_Y = y;
 	m_Width = width;
@@ -80,10 +81,12 @@ void Polygon2D::Init(float x,float y, float width, float Height, const WCHAR* Te
 	}
 	if (FAILED(hr))
 	{
+		// STEP12: image1.png failed to load/convert -- leaving m_Texture as
+		// garbage here used to hand the GPU driver a wild pointer via
+		// PSSetShaderResources in Draw(), which is exactly the kind of bug
+		// that crashes deep inside nvwgf2umx.dll instead of failing cleanly.
+		// Draw() below now skips binding/drawing entirely when this is null.
 		m_Texture = nullptr;
-		char buf[256];
-		sprintf_s(buf, "[Polygon2D] texture load FAILED (hr=0x%08X) -- this Polygon2D will not draw.\n", (unsigned int)hr);
-		OutputDebugStringA(buf);
 	}
 }
 
@@ -102,8 +105,12 @@ void Polygon2D::Update()
 
 void Polygon2D::Draw()
 {
-	if (!m_Texture) return;
+	if (!m_Texture) return; // STEP12: texture failed to load in Init() -- nothing safe to draw
 
+	// STEP40: 現在のm_Alphaを反映した頂点を作り直してGPU側のバッファを更新する。
+	// Usage=D3D11_USAGE_DEFAULTなのでMap/Unmap(DYNAMIC用)は使えず、UpdateSubresource()で
+	// 書き換える(タイトルロゴ/スプラッシュロゴのフェードイン・アウトはこの仕組みが
+	// 無いと実現できない)。
 	VERTEX_3D vertex[4];
 
 	vertex[0].Position = XMFLOAT3(m_X, m_Y, 0.0f);
@@ -128,8 +135,12 @@ void Polygon2D::Draw()
 
 	Renderer::GetDeviceContext()->UpdateSubresource(m_VertexBuffer, 0, nullptr, vertex, 0, 0);
 
+	// STEP42: unlitTexturePS.hlslは名前に反してLight.Enableがtrueならシーンのライティング(light.cppで
+	// Ambient=0.02程度の暗い値)をそのまま掛けてしまい、タイトルロゴやグレーフィルターなどの
+	// UI用Polygon2Dがほぼ見えなくなっていた原因だった。この描画だけLightを一時的に無効化し、
+	// 描画後に即座に元の値に戻す(他の3Dオブジェクトの照明には一切影響しない)。
 	LIGHT savedLight = Renderer::GetLight();
-	LIGHT unlitLight{};
+	LIGHT unlitLight{}; // 全フィールドゼロ初期化 -- Enable=falseも含む
 	Renderer::SetLight(unlitLight);
 
 	Renderer::GetDeviceContext()->IASetInputLayout(m_VertexLayout);
@@ -137,6 +148,7 @@ void Polygon2D::Draw()
 	Renderer::GetDeviceContext()->VSSetShader(m_VertexShader, NULL, 0);
 	Renderer::GetDeviceContext()->PSSetShader(m_PixelShader, NULL, 0);
 
+	// テクスチャをピクセルシェーダへバインド (t0)
 	Renderer::GetDeviceContext()->PSSetShaderResources(0, 1, &m_Texture);
 
 	Renderer::SetWorldViewProjection2D();
@@ -161,5 +173,5 @@ void Polygon2D::Draw()
 
 	Renderer::GetDeviceContext()->Draw(4, 0);
 
-	Renderer::SetLight(savedLight);
+	Renderer::SetLight(savedLight); // STEP42: restore -- see note above
 }

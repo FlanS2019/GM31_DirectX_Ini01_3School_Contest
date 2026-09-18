@@ -5,7 +5,6 @@
 #include "Input.h"
 #include "gameSettings.h"
 #include <cstdlib>
-#include <cstdio>
 
 namespace
 {
@@ -67,19 +66,11 @@ void Light::Update()
 	{
 		m_FlashlightIntensityScale += kFlashlightIntensityStep;
 		if (m_FlashlightIntensityScale > kFlashlightIntensityMax) m_FlashlightIntensityScale = kFlashlightIntensityMax;
-
-		char buf[64];
-		sprintf_s(buf, "[Light] flashlight intensity: %.2fx\n", m_FlashlightIntensityScale);
-		OutputDebugStringA(buf);
 	}
 	if (Input::GetKeyTrigger(VK_OEM_MINUS))
 	{
 		m_FlashlightIntensityScale -= kFlashlightIntensityStep;
 		if (m_FlashlightIntensityScale < kFlashlightIntensityMin) m_FlashlightIntensityScale = kFlashlightIntensityMin;
-
-		char buf[64];
-		sprintf_s(buf, "[Light] flashlight intensity: %.2fx\n", m_FlashlightIntensityScale);
-		OutputDebugStringA(buf);
 	}
 
 	if (m_FlickerActive)

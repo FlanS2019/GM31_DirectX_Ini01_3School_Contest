@@ -87,9 +87,6 @@ void Polygon2D::Init(float x,float y, float width, float Height, const WCHAR* Te
 		// that crashes deep inside nvwgf2umx.dll instead of failing cleanly.
 		// Draw() below now skips binding/drawing entirely when this is null.
 		m_Texture = nullptr;
-		char buf[256];
-		sprintf_s(buf, "[Polygon2D] texture load FAILED (hr=0x%08X) -- this Polygon2D will not draw.\n", (unsigned int)hr);
-		OutputDebugStringA(buf);
 	}
 }
 

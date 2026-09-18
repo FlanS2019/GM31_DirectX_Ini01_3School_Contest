@@ -3,17 +3,20 @@
 #include "gameSettings.h"
 #include "Input.h"
 #include "hud.h"
-#include "manager.h" 
-#include "menuSound.h"
+#include "manager.h" // STEP27: Manager::GetGameObject<MenuSound>()に必要
+#include "menuSound.h" // STEP27
 #include <cstdio>
 
 namespace
 {
+	// STEP24: 追加仕様書13項の表の並び順そのまま(音量2つ、画面3つ、
+	// 操作2つ、その他1つ)+ 末尾に「デフォルトに戻す」「戻る」の2ボタン。
 	enum RowId
 	{
 		Row_BgmVolume,
 		Row_SeVolume,
 		Row_Brightness,
+		Row_Resolution, // STEP48
 		Row_Fullscreen,
 		Row_FpsCap,
 		Row_MouseSensitivity,
@@ -29,6 +32,7 @@ namespace
 		"BGM音量",
 		"SE音量",
 		"画面の光量",
+		"解像度", // STEP48
 		"ウィンドウ/フルスクリーン",
 		"フレームレート上限",
 		"マウス感度",
@@ -44,7 +48,10 @@ namespace
 
 	const char* kFpsCapLabels[3] = { "30", "60", "無制限" };
 	const char* kHorrorLabels[3] = { "弱", "中", "強" };
+	const char* kResolutionLabels[5] = { "144p", "360p", "480p", "1080p", "4K" }; // STEP48
 
+	// STEP34: 1.5x -- DrawUI()とUpdate()(マウスの当たり判定)の両方から
+	// 参照するので、ここに1箇所だけ置いて食い違いが起きないようにする。
 	const float kPanelW = 840.0f;
 	const float kPanelH = 90.0f + Row_Count * 60.0f;
 	const float kHeaderGap = 66.0f; // 見出し「設定」の後、最初の行までの間隔
@@ -60,6 +67,9 @@ namespace
 		return value;
 	}
 
+	// 左右キーでの増減。スライダー/切り替え/サイクルの行だけが対象
+	// (デフォルトに戻す/戻るはEnterでのみ動くアクション行)。STEP37:
+	// マウスクリックでの「行の値を進める」もこれを直接呼ぶ。
 	void AdjustRow(int row, int direction)
 	{
 		switch (row)
@@ -73,8 +83,16 @@ namespace
 		case Row_Brightness:
 			GameSettings::SetBrightness(ClampStep(GameSettings::GetBrightness() + direction * kBrightnessStep, kBrightnessStep, 0.0f, 1.0f));
 			break;
+		case Row_Resolution:
+		{
+			int v = GameSettings::GetResolutionIndex() + direction;
+			if (v < 0) v = 4;
+			if (v > 4) v = 0;
+			GameSettings::SetResolutionIndex(v);
+			break;
+		}
 		case Row_Fullscreen:
-			GameSettings::SetFullscreen(!GameSettings::GetFullscreen()); 
+			GameSettings::SetFullscreen(!GameSettings::GetFullscreen()); // トグルなので方向は無視
 			break;
 		case Row_FpsCap:
 		{
@@ -99,7 +117,7 @@ namespace
 			break;
 		}
 		default:
-			break;
+			break; // Row_ResetDefault / Row_Back は左右キーでは何もしない
 		}
 	}
 
@@ -115,6 +133,9 @@ namespace
 			break;
 		case Row_Brightness:
 			sprintf_s(outBuf, bufSize, "%d%%", (int)(GameSettings::GetBrightness() * 100.0f + 0.5f));
+			break;
+		case Row_Resolution:
+			sprintf_s(outBuf, bufSize, "%s", kResolutionLabels[GameSettings::GetResolutionIndex()]);
 			break;
 		case Row_Fullscreen:
 			sprintf_s(outBuf, bufSize, "%s", GameSettings::GetFullscreen() ? "フルスクリーン" : "ウィンドウ");
@@ -142,7 +163,7 @@ void SettingsScreen::Update()
 {
 	if (!m_Open) return;
 
-	MenuSound* menuSound = Manager::GetGameObject<MenuSound>();
+	MenuSound* menuSound = Manager::GetGameObject<MenuSound>(); // STEP27
 
 	if (Input::GetKeyTrigger(VK_ESCAPE))
 	{
@@ -150,6 +171,10 @@ void SettingsScreen::Update()
 		return;
 	}
 
+	// STEP37: マウスでのホバー選択/クリック操作。行全体(ラベル～値の帯)を
+	// 当たり判定にし、クリックすると: デフォルトに戻す/戻る行なら
+	// Enterと同じ確定処理、それ以外の調整可能な行なら右キー1回分だけ
+	// 値を進める(スライダーをクリックで進めるのと同じ感覚)。
 	bool mouseConfirm = false;
 	{
 		int mx = Input::GetMouseX();
@@ -158,6 +183,8 @@ void SettingsScreen::Update()
 		float panelY = PanelY();
 		float rowLeft = panelX;
 		float rowRight = panelX + kPanelW;
+		// STEP37注記: DrawUI()のyは各行の文字列の上端で、panelY+30+kHeaderGapが
+		// 最初の行のyと一致する(見出し分はkHeaderGapに織り込み済み)。
 		float rowY = panelY + 30.0f + kHeaderGap;
 
 		for (int row = 0; row < Row_Count; row++)
@@ -207,7 +234,7 @@ void SettingsScreen::Update()
 		AdjustRow(m_Selected, +1);
 	}
 
-	if (Input::GetKeyTrigger(VK_RETURN) || mouseConfirm)
+	if (Input::GetKeyTrigger(VK_RETURN) || mouseConfirm) // STEP37: マウス決定も同じ扱い
 	{
 		if (m_Selected == Row_ResetDefault)
 		{
@@ -233,11 +260,11 @@ void SettingsScreen::DrawUI()
 	Hud::DrawPanel(panelX, panelY, kPanelW, kPanelH);
 
 	const float centerX = SCREEN_WIDTH * 0.5f;
-	const float labelX = panelX + 45.0f; 
-	const float valueX = panelX + kPanelW - 165.0f; 
+	const float labelX = panelX + 45.0f; // STEP34: 1.5x
+	const float valueX = panelX + kPanelW - 165.0f; // STEP34: 1.5x // 左寄せで描く分の余白(kFpsCapLabels等の最大幅を想定)
 
-	float y = panelY + 30.0f; 
-	Hud::DrawText("設定", centerX, y, 39.0f, true); 
+	float y = panelY + 30.0f; // STEP34: 1.5x
+	Hud::DrawText("設定", centerX, y, 39.0f, true); // STEP34: 1.5x
 	y += kHeaderGap;
 
 	for (int row = 0; row < Row_Count; row++)
@@ -245,13 +272,13 @@ void SettingsScreen::DrawUI()
 		bool selected = (row == m_Selected);
 		char labelBuf[64];
 		sprintf_s(labelBuf, "%s%s", selected ? "> " : "  ", kRowLabels[row]);
-		Hud::DrawText(labelBuf, labelX, y, 30.0f, false);
+		Hud::DrawText(labelBuf, labelX, y, 30.0f, false); // STEP34: 1.5x
 
 		if (row != Row_ResetDefault && row != Row_Back)
 		{
 			char valueBuf[32];
 			FormatValueText(row, valueBuf, sizeof(valueBuf));
-			Hud::DrawText(valueBuf, valueX, y, 30.0f, false);
+			Hud::DrawText(valueBuf, valueX, y, 30.0f, false); // STEP34: 1.5x
 		}
 
 		y += kRowH;

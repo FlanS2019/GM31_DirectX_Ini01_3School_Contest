@@ -153,6 +153,42 @@ namespace
 		outRight = cr.x + offR + hR;
 	}
 
+	// 壁ブロックの引き延ばし(隙間を消してドアモデルなどを後々埋め込み
+	// やすくする)。手順: (1)各行を横方向にランへまとめる (2)真下の行が
+	// 同じ列範囲・同じ左右端を持つ限り縦にも連結する (3)最終的な上端/
+	// 下端は、1行だけのグループなら北/南を同時に見るThinWallAxis、2行
+	// 以上なら「一番上の行の北側だけ」「一番下の行の南側だけ」を見た端を
+	// 使う。当たり判定(Player.cppのBox衝突)は座標(中心)とサイズ(半径)
+	// しか見ないので、個数が減っても挙動は変わらない。この4通りの組み
+	// 合わせが元の1セルずつのPlaceWallと完全に同じ形状になることは、
+	// Pythonでground truthを再現し20万点のランダムサンプリングで不一致
+	// 0件になることを確認済み(merge_sim4.py)。
+	// STEP45: row3/row4、row7/row8の境界にある、孤立した柱状の壁セル(col4/col7)と、その南北に連なる横長い
+	// 壁ブロックの隙間を塔ぐ補強ブロック。座標はPythonでの手計算(CellCenter/ThinWallAxisをそのまま
+	// 辛抱えて検証)により、既存の2つの形の交差部分を含む十分な幅(Xはpillar中心±1.0、Zは継ぎ目±1.0)で
+	// 固定してある -- SpawnMergedWalls本体のアルゴリズムや他の壁の見た目には一切影響しない。
+	void SpawnWallCornerPatches()
+	{
+		auto patch = [](float x, float z)
+		{
+			Box* fix = Manager::AddGameObject<Box>();
+			fix->SetPosition({ x, WALL_HEIGHT / 2.0f, z });
+			fix->SetScale({ 1.0f, WALL_HEIGHT / 2.0f, 1.0f });
+		};
+
+		// STEP46: 前回(STEP45)はZ座標を手計算で間違えていて(CellCenterの+0.5を忘れて、2セル分ずれていた)、
+		// 実はどのパッチも隙間に届いていなかった。今回はPythonでSpawnMergedWalls/SpawnDoorwayの座標計算を
+		// そのまま再実装して全壁ピースの接合を網羅的に検証(row3/4とrow7/8の2つだけではなく、
+		// 同じ仕切りrow4の南側、row4/row5の境界にも同様の隙間があることを発見)し、正しいZ座標
+		// (種々的にZ=-6/-2/10)で全6か所を再配置してある。
+		patch(-6.0f, -6.0f);  // room A/C仕切り(row3-4)、西側の柱(col4)
+		patch(6.0f, -6.0f);   // 同、東側の柱(col7)
+		patch(-6.0f, -2.0f);  // 同じ仕切りの反対側(row4-5)、西側の柱(col4)
+		patch(6.0f, -2.0f);   // 同、東側の柱(col7)
+		patch(-6.0f, 10.0f);  // room B/N仕切り(row7-8)、西側の柱(col4)
+		patch(6.0f, 10.0f);   // 同、東側の柱(col7)
+	}
+
 	void SpawnMergedWalls()
 	{
 		std::vector<WallRun> rowRuns;
@@ -253,6 +289,12 @@ namespace
 		}
 	}
 
+	// 天井は壁と違って縮み(ThinWallAxis)が無く、全マス同じ大きさで隙間なく
+	// 敷き詰めているだけなので、壁より単純な「隙間なしランレングス」で
+	// まとめられる。IsCeilingCoveredを個別に切り出してあるのは、将来
+	// 「崩れた屋根に穴を開ける」ような演出を足したくなったとき、ここを
+	// 1行変えるだけで済むようにするため(今は常にtrueなので、結果的に
+	// 1～数個の巨大な板にまとまる)。
 	bool IsCeilingCovered(int row, int col)
 	{
 		(void)row;
@@ -469,6 +511,18 @@ namespace
 		pallet->SetRotation({ 0.0f, yRotation, 0.0f });
 	}
 
+	// ドア1個ぶん(Door_VAR01の枠+観音開きの扉2枚+当たり判定)をまとめて
+	// 配置する。widthIsZ で「ドアの通り抜け方向がX軸か(false, 東西に
+	// 伸びる壁ランの途中にある)/Z軸か(true, 南北に伸びる壁ランの途中に
+	// ある)」を指定する -- 部屋の光源のyRotation計算と同じ判定基準
+	// (隣接セルが北/南で塞がれているか)で呼び出し側が決める。
+	//
+	// Door_VAR01.objは実測で枠(Marco)の全幅が約1.07m(半径0.537)しかなく、
+	// セル1つぶん(4m)にはとても足りないので、両脇をbox.obj(壁と同じ見た目)
+	// の袖壁で埋めて、扉が本当に開く部分だけをドア枠の幅に絞っている。
+	// 当たり判定(Door::m_Position/m_Scale)は今まで通りセル全体のままに
+	// してあり(Player.cppの壁判定はそのまま)、袖壁側が常時ブロックする
+	// ことで、結果的に扉が開いた後も枠の外側(袖壁の場所)は歩けない。
 	Door* SpawnDoorway(int row, int col, bool widthIsZ)
 	{
 		Vector3 center = CellCenter(col, row);
@@ -478,6 +532,14 @@ namespace
 		const float kFlankHalfWidth = (kCellHalf - kFrameHalfWidth) / 2.0f;
 		const float kFlankCenterOffset = (kFrameHalfWidth + kCellHalf) / 2.0f;
 
+		// STEP: 袖壁(flank)とまぐさの「厚み軸」は、普通の壁(SpawnMergedWalls)
+		// と同じThinWallAxis()で求める。固定のkCellHalf*WALL_THICKNESS_SCALE
+		// を両側均等に使っていた前バージョンは、隣が壁('#')で塞がれている
+		// 側(例: 出口ドア'E'は南北が壁)でもオフセット無しで中央に留まって
+		// しまい、実際の壁面との間に隙間・段差ができていた(壁の配置が
+		// おかしく見える不具合の原因)。widthIsZならX(東西)、falseなら
+		// Z(南北)の隣接セルで開閉判定する -- 両隣とも開いてる('D'や'G'の
+		// ような孤立した戸口)場合はオフセット0のまま変わらない。
 		float thicknessOffset, thicknessHalf;
 		bool boundaryEdge; // STEP44: この軸の片側が本当のマップ外(配列外)ならtrue
 		if (widthIsZ)
@@ -539,6 +601,11 @@ namespace
 		}
 
 		const float kFrameTopY = 2.175f; // Door_Frame.objの実測高さ(分割スクリプト参照)
+		// STEP: 枠(Door_Frame.obj)の高さは天井まで届かない(実測kFrameTopY)ので、
+		// 枠の上から天井までを塞ぐ「まぐさ(鴨居)」ブロックを追加。これが
+		// ドア上部に隙間が見える不具合の原因だった。厚み軸は袖壁と同じ
+		// thicknessOffset/thicknessHalfを使って、壁面とツライチに揃える。
+		const float kFrameTopY = 2.175f; // Door_Frame.objの実測高さ(分割スクリプト参照)
 		if (kFrameTopY < WALL_HEIGHT)
 		{
 			float lintelHalfHeight = (WALL_HEIGHT - kFrameTopY) / 2.0f;
@@ -569,6 +636,14 @@ namespace
 		crate->SetRotation({ 0.0f, yRotation, 0.0f });
 	}
 
+	// 天井から垂らすツタの飾り(model\Ivy.obj)。wallYRotationは壁の向き
+	// (光源と同じ0/XM_PIDIV2の判定基準)。テクスチャが手元に無かったので
+	// こちらも単色のプレースホルダー -- ivy.h参照。
+	// STEP: 「ツタの位置を天井から垂れてるようにしてほしい」との要望で
+	// Y座標をここでWALL_HEIGHT(天井の高さ)に固定するよう変更 -- 呼び出し
+	// 側(下のposition)は今まで通りXZだけ気にすればよく、Yは無視される。
+	// 下向きに垂らす回転自体はivy.cpp側(Draw()の固定180度フリップ)で
+	// 処理している。
 	void SpawnIvy(const Vector3& position, float wallYRotation)
 	{
 		Ivy* ivy = Manager::AddGameObject<Ivy>();
@@ -576,6 +651,12 @@ namespace
 		ivy->SetRotation({ 0.0f, wallYRotation, 0.0f });
 	}
 
+	// STEP: 「床の汚れ・血・木の棒とかで廃墟っぽさを増やしたい」との要望で
+	// 追加。3つとも他の廃墟プロップ(Crate/Ivy等)と同じくテクスチャが手元に
+	// 無いので単色プレースホルダー -- debris.h/stainDirt.h/stainBlood.h参照。
+
+	// 床に転がった木の棒/板きれ。yRotationで向きを変えるだけで、tiltを
+	// 渡すとX軸(倒れ込み方向)にも少し傾けられる(平らな床置きなら基本0でOK)。
 	void SpawnDebris(const Vector3& position, float yRotation, float scale = 1.0f, float tilt = 0.0f)
 	{
 		Debris* debris = Manager::AddGameObject<Debris>();
@@ -584,6 +665,7 @@ namespace
 		debris->SetScale({ scale, scale, scale });
 	}
 
+	// 床にへばりついた汚れ。scaleで1個ずつ大きさを変えるとバラつきが出る。
 	void SpawnDirtStain(const Vector3& position, float yRotation, float scale = 1.0f)
 	{
 		StainDirt* stain = Manager::AddGameObject<StainDirt>();
@@ -592,6 +674,7 @@ namespace
 		stain->SetScale({ scale, 1.0f, scale });
 	}
 
+	// 血だまり+飛び散った飛沫。ホラー演出用なので、汚れより数は控えめに。
 	void SpawnBloodStain(const Vector3& position, float yRotation, float scale = 1.0f)
 	{
 		StainBlood* stain = Manager::AddGameObject<StainBlood>();

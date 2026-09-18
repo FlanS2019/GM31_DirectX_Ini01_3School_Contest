@@ -90,7 +90,30 @@ private:
 	static ID3D11BlendState*		m_BlendState;
 	static ID3D11BlendState*		m_BlendStateATC;
 
+	// STEP49: opaque (BlendEnable=FALSE) blend state, used only by
+	// BlitSceneToBackBuffer() -- see its definition in renderer.cpp for why.
+	static ID3D11BlendState*		m_BlendStateOpaque;
 
+	// STEP48: internal render resolution. Separate from the window/backbuffer
+	// (SCREEN_WIDTH/HEIGHT) -- the 3D scene renders at this size only, then
+	// gets stretched onto the backbuffer. See SetInternalResolution() /
+	// BlitSceneToBackBuffer() in renderer.cpp.
+	static ID3D11Texture2D*          m_SceneColorTexture;
+	static ID3D11RenderTargetView*   m_SceneRenderTargetView;
+	static ID3D11ShaderResourceView* m_SceneShaderResourceView;
+	static ID3D11Texture2D*          m_SceneDepthTexture;
+	static ID3D11DepthStencilView*   m_SceneDepthStencilView;
+	static int                       m_RenderWidth;
+	static int                       m_RenderHeight;
+
+	// STEP48: fullscreen-quad resources for stretching the offscreen scene
+	// texture onto the real backbuffer. Reuses the existing unlitTextureVS/
+	// PS.cso pair (same shaders/vertex layout Polygon2D already uses for its
+	// own screen-space rectangles) -- no new shader needed.
+	static ID3D11Buffer*        m_BlitVertexBuffer;
+	static ID3D11VertexShader*  m_BlitVertexShader;
+	static ID3D11InputLayout*   m_BlitVertexLayout;
+	static ID3D11PixelShader*   m_BlitPixelShader;
 
 public:
 	static void Init();
@@ -100,6 +123,15 @@ public:
 
 	static void SetDepthEnable(bool Enable);
 	static void SetATCEnable(bool Enable);
+
+	// STEP48: resolutionIndex is 0=144p, 1=360p, 2=480p, 3=1080p, 4=4K (see
+	// settingsScreen.cpp's Row_Resolution / gameSettings.cpp). Out-of-range
+	// values are clamped. A no-op if already at that resolution.
+	static void SetInternalResolution(int resolutionIndex);
+	static void BlitSceneToBackBuffer();
+	static int GetRenderWidth() { return m_RenderWidth; }
+	static int GetRenderHeight() { return m_RenderHeight; }
+
 	static void SetWorldViewProjection2D();
 	static void SetWorldMatrix(XMMATRIX WorldMatrix);
 	static void SetViewMatrix(XMMATRIX ViewMatrix);

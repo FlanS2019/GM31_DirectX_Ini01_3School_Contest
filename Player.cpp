@@ -13,34 +13,11 @@
 #include "audio.h"
 #include "soundManager.h"
 #include "shadow.h"
-#include "Score.h"
-#include <cstdio>
 
-namespace
-{
-	unsigned s_DebugFrame = 0;
-
-	FILE* s_DebugLogFile = nullptr;
-
-	void DebugLog(const char* text)
-	{
-		OutputDebugStringA(text);
-		if (s_DebugLogFile)
-		{
-			fputs(text, s_DebugLogFile);
-			fflush(s_DebugLogFile);
-		}
-	}
-}
 
 void Player::Init()
 {
 	m_Layer = 8;
-
-	if (!s_DebugLogFile)
-	{
-		fopen_s(&s_DebugLogFile, "debug_log.txt", "w");
-	}
 
 	m_Position = { 0, 0, 0 }; // start position
 
@@ -53,13 +30,22 @@ void Player::Init()
 	m_JumpSE = AddComponent<Audio>();
 	m_JumpSE->Load("audio\\SE\\wan.mp3");
 
+	// STEP21: footstep loop + shared pickup one-shot -- see Player.h's
+	// comments on m_WalkSE/m_PickupSE for why pickup SE lives here instead
+	// of on Key/Item themselves.
 	m_WalkSE = AddComponent<Audio>();
 	m_WalkSE->Load("audio\\SE\\kawagutu_arukuoto.mp3");
+	// STEP23: "•à‚­‰¹‚ð‚Å‚Á‚©‚­‚µ‚Ä‚Ù‚µ‚¢" -- STEP22's 0.45 (a reduction)
+	// turned out to be too quiet to hear at all, not too loud; boosted past
+	// the default 1.0. STEP24: no longer a direct SetVolume() -- 1.6f is now
+	// registered with SoundManager as this SE's "base volume", with the
+	// settings screen's SE-volume slider multiplying on top of it (see
+	// SoundManager::RegisterSe()).
 	SoundManager::RegisterSe(m_WalkSE, 1.6f);
 
 	m_PickupSE = AddComponent<Audio>();
 	m_PickupSE->Load("audio\\SE\\sei_ge_shinbun_toru01.mp3");
-	SoundManager::RegisterSe(m_PickupSE, 1.0f);
+	SoundManager::RegisterSe(m_PickupSE, 1.0f); // STEP24
 
 	m_Shadow = Manager::AddGameObject<Shadow>();
 	m_Shadow->SetScale({ 5.0f, 5.0f, 5.0f });
@@ -75,6 +61,9 @@ void Player::Uninit()
 	if (m_PickupSE) { SoundManager::Unregister(m_PickupSE); m_PickupSE->Uninit(); }
 }
 
+// STEP21: called by Key::Update()/Item::Interact() on a successful pickup --
+// see Player.h's m_PickupSE comment for why the sound plays from here
+// instead of from the (about-to-be-destroyed) Key/Item object itself.
 void Player::PlayPickupSE()
 {
 	if (m_PickupSE) m_PickupSE->Play(false);
@@ -82,16 +71,7 @@ void Player::PlayPickupSE()
 
 void Player::Update()
 {
-	s_DebugFrame++;
-
-	{
-		Score* score = Manager::GetGameObject<Score>();
-		if (score)
-		{
-			score->SetValue(s_DebugFrame % 10000);
-		}
-	}
-
+	// fixed-step dt (fine for a school-contest build; swap for a real delta time later)
 	float dt = 1.0f / 60.0f;
 
 	const float accel = 1.0f;
@@ -100,10 +80,12 @@ void Player::Update()
 	const float gravity = 60.0f;
 	const float jumpImpulse = 25.0f;
 
+	// --- Sprint (Shift) ---
 	const float sprintMultiplier = Input::GetKeyPress(VK_SHIFT) ? 2.0f : 1.0f;
 	const float currentAccel = accel * sprintMultiplier;
 	const float currentMaxSpeed = maxSpeed * sprintMultiplier;
 
+	// --- First-person: body yaw always matches the camera's look direction ---
 	Camera* camera = Manager::GetGameObject<Camera>();
 	float camYaw = camera ? camera->GetYaw() : 0.0f;
 	m_Rotation.y = camYaw;
@@ -111,6 +93,7 @@ void Player::Update()
 	Vector3 camForward(sinf(camYaw), 0.0f, cosf(camYaw));
 	Vector3 camRight(cosf(camYaw), 0.0f, -sinf(camYaw));
 
+	// --- Movement input (relative to view direction) ---
 	bool moving = false;
 	float inputX = 0.0f;
 	float inputZ = 0.0f;
@@ -128,11 +111,18 @@ void Player::Update()
 		moveDir.z /= moveLen;
 	}
 
+	// --- Ground check ---
 	const float groundEpsilon = 0.001f;
 	bool grounded = (m_Position.y <= groundEpsilon);
 	bool oldGround = m_Grounded;
 	m_Grounded = false;
 
+	// STEP21: footstep SE loop -- only while actually moving on the ground
+	// (no phantom footsteps mid-air/mid-jump). Toggled only on the frame
+	// the state changes, same "Play(true) once / Stop() once" pattern
+	// Horror's heartbeat and LightTube's flicker SE both already use --
+	// calling Play(true) every frame would restart the loop constantly
+	// instead of actually looping it.
 	{
 		bool walking = moving && grounded;
 		if (walking && !m_WalkPlaying)
@@ -177,6 +167,7 @@ void Player::Update()
 	// gravity
 	m_Velocity.y -= gravity * dt;
 
+	// horizontal velocity magnitude (used for friction)
 	Vector3 horizontalVel(m_Velocity.x, 0.0f, m_Velocity.z);
 	float hSpeed = std::sqrt(horizontalVel.x * horizontalVel.x + horizontalVel.z * horizontalVel.z);
 
@@ -197,6 +188,7 @@ void Player::Update()
 		}
 		else
 		{
+			// no input: decelerate with friction
 			if (hSpeed > 0.0f)
 			{
 				float decel = friction * dt;
@@ -215,8 +207,7 @@ void Player::Update()
 		}
 	}
 
-	Vector3 debugPosBeforeMove = m_Position;
-
+	// integrate velocity into position
 	m_Position.x += m_Velocity.x * dt;
 	m_Position.y += m_Velocity.y * dt;
 	m_Position.z += m_Velocity.z * dt;
@@ -256,11 +247,11 @@ void Player::Update()
 		Box* bestBox = nullptr;
 		Vector3 bestBoxPos{}, bestBoxScale{};
 		float bestPen = 0.0f;
-		char bestAxis = 0;
+		char bestAxis = 0; // 'X' or 'Z' -- no 'T' (top) case, see above
 
 		for (auto box : boxes)
 		{
-			if (!box->IsBlocking()) continue;
+			if (!box->IsBlocking()) continue; // e.g. a Door that's (fully) open
 
 			Vector3 boxPosition = box->GetPosition();
 			Vector3 boxScale = box->GetScale();
@@ -293,17 +284,6 @@ void Player::Update()
 
 		const float pushClearance = 0.3f;
 
-		{
-			char buf[256];
-			sprintf_s(buf,
-				"[COLLIDE] frame=%u pass=%d box=%p boxPos=(%.2f,%.2f,%.2f) boxScale=(%.2f,%.2f,%.2f) playerPos=(%.2f,%.2f,%.2f) pen=%.3f pick=%c\n",
-				s_DebugFrame, pass, (void*)bestBox, bestBoxPos.x, bestBoxPos.y, bestBoxPos.z,
-				bestBoxScale.x, bestBoxScale.y, bestBoxScale.z,
-				m_Position.x, m_Position.y, m_Position.z,
-				bestPen, bestAxis);
-			DebugLog(buf);
-		}
-
 		if (bestAxis == 'X')
 		{
 			if (m_Position.x < bestBoxPos.x)
@@ -326,29 +306,9 @@ void Player::Update()
 		const float maxSanePush = 3.0f;
 		if (pushDist > maxSanePush)
 		{
-			char buf[256];
-			sprintf_s(buf,
-				"[SUSPICIOUS PUSH] frame=%u collision moved %.2f units in one frame: (%.2f,%.2f,%.2f) -> (%.2f,%.2f,%.2f) -- reverted\n",
-				s_DebugFrame, pushDist, prePush.x, prePush.y, prePush.z, m_Position.x, m_Position.y, m_Position.z);
-			DebugLog(buf);
-
 			m_Position = prePush;
 			m_Velocity.x = 0.0f;
 			m_Velocity.z = 0.0f;
-		}
-	}
-
-	{
-		Vector3 debugDelta = m_Position - debugPosBeforeMove;
-		float debugJump = debugDelta.length();
-		if (debugJump > 1.0f)
-		{
-			char buf[256];
-			sprintf_s(buf,
-				"[JUMP DETECTED] frame=%u moved %.2f units in one frame: (%.2f,%.2f,%.2f) -> (%.2f,%.2f,%.2f)\n",
-				s_DebugFrame, debugJump, debugPosBeforeMove.x, debugPosBeforeMove.y, debugPosBeforeMove.z,
-				m_Position.x, m_Position.y, m_Position.z);
-			DebugLog(buf);
 		}
 	}
 
@@ -369,13 +329,6 @@ void Player::Update()
 	Vector3 shadowPos = m_Position;
 	shadowPos.y = 0.05f;
 	m_Shadow->SetPosition(shadowPos);
-
-	{
-		char buf[128];
-		sprintf_s(buf, "[POS] frame=%u pos=(%.2f,%.2f,%.2f)\n",
-			s_DebugFrame, m_Position.x, m_Position.y, m_Position.z);
-		DebugLog(buf);
-	}
 
 	GameObject::Update();
 }

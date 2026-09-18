@@ -206,16 +206,6 @@ void ModelRenderer::LoadObj( const char *FileName, MODEL_OBJ *ModelObj )
 
 	FILE *file;
 	file = fopen( FileName, "rt" );
-	if (!file)
-	{
-		// STEP17: fopen failure was a silent assert with no clue which file
-		// was missing -- print the exact path this Load() call was given so
-		// the next crash's Output window says which model/path is wrong
-		// instead of just "Expression: file".
-		char buf[512];
-		sprintf_s(buf, "[ModelRenderer] LoadObj: fopen FAILED for \"%s\"\n", FileName);
-		OutputDebugStringA(buf);
-	}
 	assert(file);
 
 
@@ -465,14 +455,6 @@ void ModelRenderer::LoadMaterial( const char *FileName, MODEL_MATERIAL **Materia
 
 	FILE *file;
 	file = fopen( FileName, "rt" );
-	if (!file)
-	{
-		// STEP17: same reasoning as LoadObj() above -- print which .mtl path
-		// failed before the assert fires.
-		char buf[512];
-		sprintf_s(buf, "[ModelRenderer] LoadMaterial: fopen FAILED for \"%s\"\n", FileName);
-		OutputDebugStringA(buf);
-	}
 	assert(file);
 
 	MODEL_MATERIAL *materialArray;

@@ -163,6 +163,32 @@ namespace
 	// 合わせが元の1セルずつのPlaceWallと完全に同じ形状になることは、
 	// Pythonでground truthを再現し20万点のランダムサンプリングで不一致
 	// 0件になることを確認済み(merge_sim4.py)。
+	// STEP45: row3/row4、row7/row8の境界にある、孤立した柱状の壁セル(col4/col7)と、その南北に連なる横長い
+	// 壁ブロックの隙間を塔ぐ補強ブロック。座標はPythonでの手計算(CellCenter/ThinWallAxisをそのまま
+	// 辛抱えて検証)により、既存の2つの形の交差部分を含む十分な幅(Xはpillar中心±1.0、Zは継ぎ目±1.0)で
+	// 固定してある -- SpawnMergedWalls本体のアルゴリズムや他の壁の見た目には一切影響しない。
+	void SpawnWallCornerPatches()
+	{
+		auto patch = [](float x, float z)
+		{
+			Box* fix = Manager::AddGameObject<Box>();
+			fix->SetPosition({ x, WALL_HEIGHT / 2.0f, z });
+			fix->SetScale({ 1.0f, WALL_HEIGHT / 2.0f, 1.0f });
+		};
+
+		// STEP46: 前回(STEP45)はZ座標を手計算で間違えていて(CellCenterの+0.5を忘れて、2セル分ずれていた)、
+		// 実はどのパッチも隙間に届いていなかった。今回はPythonでSpawnMergedWalls/SpawnDoorwayの座標計算を
+		// そのまま再実装して全壁ピースの接合を網羅的に検証(row3/4とrow7/8の2つだけではなく、
+		// 同じ仕切りrow4の南側、row4/row5の境界にも同様の隙間があることを発見)し、正しいZ座標
+		// (種々的にZ=-6/-2/10)で全6か所を再配置してある。
+		patch(-6.0f, -6.0f);  // room A/C仕切り(row3-4)、西側の柱(col4)
+		patch(6.0f, -6.0f);   // 同、東側の柱(col7)
+		patch(-6.0f, -2.0f);  // 同じ仕切りの反対側(row4-5)、西側の柱(col4)
+		patch(6.0f, -2.0f);   // 同、東側の柱(col7)
+		patch(-6.0f, 10.0f);  // room B/N仕切り(row7-8)、西側の柱(col4)
+		patch(6.0f, 10.0f);   // 同、東側の柱(col7)
+	}
+
 	void SpawnMergedWalls()
 	{
 		std::vector<WallRun> rowRuns;
@@ -515,10 +541,28 @@ namespace
 		// Z(南北)の隣接セルで開閉判定する -- 両隣とも開いてる('D'や'G'の
 		// ような孤立した戸口)場合はオフセット0のまま変わらない。
 		float thicknessOffset, thicknessHalf;
+		bool boundaryEdge; // STEP44: この軸の片側が本当のマップ外(配列外)ならtrue
 		if (widthIsZ)
+		{
+			boundaryEdge = (col - 1 < 0) || (col + 1 >= COLS);
 			ThinWallAxis(kCellHalf, !IsSolidCell(row, col - 1), !IsSolidCell(row, col + 1), thicknessOffset, thicknessHalf);
+		}
 		else
+		{
+			boundaryEdge = (row - 1 < 0) || (row + 1 >= ROWS);
 			ThinWallAxis(kCellHalf, !IsSolidCell(row - 1, col), !IsSolidCell(row + 1, col), thicknessOffset, thicknessHalf);
+		}
+
+		if (boundaryEdge)
+		{
+			// STEP44: この軸の片側が本当のマップ外(配列外セル)の場合、ThinWallAxis()の「開いている側だけ薄く逃がす」処理を使うと、
+			// 同じ行/列に並ぶ他の壁(SpawnMergedWalls側、こちらは北隣が'#'なので薄くならない)と厚みが
+			// 合わなくなり、扉(Eなど)が全開になった瞬間にフランクの北側にすり抜けられる隙間が
+			// できてしまう(出口Eで発生していた不具合)。マップ外に接する扉は常にフル厚みのままにして、
+			// 隣の壁と面を揃える。
+			thicknessOffset = 0.0f;
+			thicknessHalf = kCellHalf;
+		}
 
 		// STEP: 袖壁/まぐさはthicknessOffsetで実際の壁面(片側が開放なら
 		// そちら寄り)に揃えているのに、ドア本体(枠+扉)は今までcenterの
@@ -648,6 +692,12 @@ void Map::Init()
 	// 隙間なく繋がった少数の大きなBoxへ変更した(当たり判定・見た目とも
 	// 元の形と完全に同じであることをPythonで検証済み -- SpawnMergedWalls参照)。
 	SpawnMergedWalls();
+
+	// STEP45: 中廊(row3/row4、row7/row8の境界)で、孤立した柱状の壁セル(col4/col7)と、その南北に連なる
+	// SpawnMergedWallsの横長い壁ブロックとの間にできる隙間を塔ぐ。出口扉のフランクで直したSTEP44と同じ
+	// 系統の不具合(ユーザー報告: マップ中廊の柱と横壁の継ぎ目から中に入れてしまう)。SpawnMergedWalls
+	// 本体のロジックは触らず、問題の4箇所の角に既存の壁と十分重なる補強ブロックを置いて塔ぐ。
+	SpawnWallCornerPatches();
 
 	// STEP18: gimmickDoor bug fix -- the main loop below is row-major
 	// (top-to-bottom), and 'X' (row 3, the switch) appears in the grid
@@ -932,4 +982,16 @@ void Map::Init()
 	SpawnBloodStain(CellCenter(5, 8) + Vector3(-0.25f, 0.0f, 0.15f), 2.1f, 1.0f); // 廊下(2/4)
 	SpawnBloodStain(CellCenter(6, 9) + Vector3(0.1f, 0.0f, -0.3f), 1.0f, 0.95f);  // 廊下(3/4)
 	SpawnBloodStain(CellCenter(5, 9) + Vector3(-0.1f, 0.0f, 0.25f), 3.0f, 1.3f);  // 廊下(4/4、出口直前で一番大きく)
+
+	// STEP43: 「各部屋廈下にオブジェクトをもっと増やして廈境さを増す」との要望で追加。
+	// 部屋A/B/C/Nはすでに上で密度が高い(全ての空きマス目に既に何か置いてある)ので、
+	// まだ何もない中央南北廈下(col5-6中心、row1-9)の未使用セルにのみ追加する。
+	SpawnDebris(CellCenter(5, 1) + Vector3(0.3f, 0.0f, -0.2f), 1.6f, 0.9f);
+	SpawnDirtStain(CellCenter(6, 1) + Vector3(-0.2f, 0.0f, 0.3f), 0.5f, 1.0f);
+	SpawnCrate(CellCenter(4, 2) + Vector3(0.0f, 0.0f, 0.4f), 3.3f);           // 部屋Cへのドア手前、廈下側に見張り番したがりのように
+	SpawnDebris(CellCenter(5, 3) + Vector3(-0.3f, 0.0f, 0.2f), 2.2f, 1.0f);
+	SpawnBloodStain(CellCenter(6, 3) + Vector3(0.2f, 0.0f, -0.3f), 1.9f, 0.85f);
+	SpawnDirtStain(CellCenter(5, 5) + Vector3(0.3f, 0.0f, 0.15f), 2.6f, 1.05f);
+	SpawnDebris(CellCenter(6, 5) + Vector3(-0.25f, 0.0f, -0.3f), 0.7f, 0.95f);
+	SpawnFallenStool(CellCenter(7, 6) + Vector3(0.0f, 0.0f, 0.3f), 1.1f);      // ギミックドアG(col4,row6)のすぐ横、幅の広いrow6の三マス目
 }

@@ -50,4 +50,10 @@ public:
 	// 不定期アンビエントSEの間隔を読みに行く。
 	static int GetHorrorIntensity();
 	static void SetHorrorIntensity(int intensity);
+
+	// STEP48: 0=144p, 1=360p, 2=480p, 3=1080p, 4=4K -- internal render
+	// resolution only (Renderer::SetInternalResolution()); window size is
+	// never touched. Default 3 = native 1080p (no upscaling at all).
+	static int GetResolutionIndex();
+	static void SetResolutionIndex(int index);
 };

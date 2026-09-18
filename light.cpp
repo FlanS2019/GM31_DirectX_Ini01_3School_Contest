@@ -5,19 +5,27 @@
 #include "Input.h"
 #include "gameSettings.h"
 #include <cstdlib>
-#include <cstdio>
 
 namespace
 {
+	// Fluorescent flicker timing, in seconds. Deliberately irregular so it
+	// doesn't read as a metronome -- real failing tubes don't blink evenly.
 	const float kFlickerMinInterval = 0.04f;
 	const float kFlickerMaxInterval = 0.35f;
 
+	// A flickering tube never goes fully black (there's still ambient
+	// light in the room) -- it just drops to a dim residual glow.
 	const float kFlickerDimScale = 0.12f;
 
+	// Debug flashlight-intensity step ('=' / '-'), and how far it can go.
 	const float kFlashlightIntensityStep = 0.25f;
 	const float kFlashlightIntensityMin = 0.25f;
 	const float kFlashlightIntensityMax = 6.0f;
 
+	// STEP24: 「光量を最大にしても暗さの下限を保つ」(追加仕様書15項) --
+	// 素の0..1をそのまま明るさに使うとbrightness=1でホラー演出が台無しに
+	// なるため、0.7～1.3倍のレンジへ写像する(既定値0.5がちょうど1.0倍=
+	// これまで通りの明るさになるよう中央に置いている)。
 	const float kBrightnessScaleMin = 0.7f;
 	const float kBrightnessScaleMax = 1.3f;
 
@@ -29,6 +37,8 @@ namespace
 
 void Light::Init()
 {
+	// STEP24: 起動時のsettings.iniの値(無ければ既定の0.5)を反映してから
+	// 最初のPush()を行う。
 	SetBrightness01(GameSettings::GetBrightness());
 	Push();
 }
@@ -42,28 +52,25 @@ void Light::SetBrightness01(float brightness01)
 
 void Light::Update()
 {
+	// SPEC STEP5: "FキーでON/OFF".
 	if (Input::GetKeyTrigger('F'))
 	{
 		ToggleFlashlight();
 	}
 
+	// Debug: '=' (the unshifted '+' key) / '-' bump the flashlight's
+	// brightness up/down at runtime. Not spec'd -- just for seeing what's
+	// actually lit while other systems get built; see the note on
+	// m_FlashlightIntensityScale in light.h if this becomes permanent.
 	if (Input::GetKeyTrigger(VK_OEM_PLUS))
 	{
 		m_FlashlightIntensityScale += kFlashlightIntensityStep;
 		if (m_FlashlightIntensityScale > kFlashlightIntensityMax) m_FlashlightIntensityScale = kFlashlightIntensityMax;
-
-		char buf[64];
-		sprintf_s(buf, "[Light] flashlight intensity: %.2fx\n", m_FlashlightIntensityScale);
-		OutputDebugStringA(buf);
 	}
 	if (Input::GetKeyTrigger(VK_OEM_MINUS))
 	{
 		m_FlashlightIntensityScale -= kFlashlightIntensityStep;
 		if (m_FlashlightIntensityScale < kFlashlightIntensityMin) m_FlashlightIntensityScale = kFlashlightIntensityMin;
-
-		char buf[64];
-		sprintf_s(buf, "[Light] flashlight intensity: %.2fx\n", m_FlashlightIntensityScale);
-		OutputDebugStringA(buf);
 	}
 
 	if (m_FlickerActive)
@@ -102,6 +109,11 @@ void Light::UpdateFlashlightAim()
 	Vector3 right = Vector3::cross(worldUp, forward);
 	right.normalize();
 
+	// Offset the beam's *origin* forward/right/down from the eye so it
+	// reads as coming from a hand held out in front and to the side --
+	// no flashlight mesh needed for that to work, it's purely where the
+	// light itself starts from. Direction still just follows the camera,
+	// same as the eye-mounted version would.
 	Vector3 origin = eye + forward * 0.35f + right * 0.28f + Vector3(0.0f, -0.28f, 0.0f);
 
 	m_SpotPosition = XMFLOAT4(origin.x, origin.y, origin.z, 1.0f);
@@ -118,6 +130,8 @@ void Light::Push()
 		light.IsSpot = true;
 		light.Position = m_SpotPosition;
 		light.Direction = m_SpotDirection;
+		// STEP24: m_BrightnessScaleは設定画面の「画面の光量」 -- 懐中電灯にも
+		// 周囲のAmbientにも同じスケールをかけて一貫させる。
 		light.Ambient = XMFLOAT4(m_Ambient.x * m_BrightnessScale, m_Ambient.y * m_BrightnessScale, m_Ambient.z * m_BrightnessScale, m_Ambient.w);
 		light.Diffuse = XMFLOAT4(
 			m_FlashlightDiffuse.x * m_FlashlightIntensityScale * m_BrightnessScale,

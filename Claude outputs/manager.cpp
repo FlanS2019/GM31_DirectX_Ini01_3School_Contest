@@ -9,11 +9,15 @@
 #include "result.h"
 #include "Game.h"
 #include "gameSettings.h"
+#include "splash.h" // STEP40
 
 std::list<GameObject*> Manager::g_GameObject;//リストを使用する場合は、配列ではなくリストを宣言する必要があります。
 Scene* Manager::m_Scene = nullptr;
 Scene* Manager::m_NextScene = nullptr;
 float Manager::m_ChangeTime = 0.0f;
+float Manager::m_ChangeTotalTime = 0.0f; // STEP37
+float Manager::m_FadeInTimer = 0.0f;     // STEP37
+float Manager::m_FadeInDuration = 0.0f;  // STEP37
 bool Manager::m_Paused = false;
 
 void Manager::Init()
@@ -26,7 +30,9 @@ void Manager::Init()
 
 	Renderer::Init();
 	Input::Init();
-	ChangeScene<Title>();
+	// STEP40: 起動直後はいきなりTitleではなく、制作者ロゴスプラッシュ(Splash)を持つ。
+	// SplashはSplashLogo::Update()内で自分でChangeScene<Title>()を呼ぶ(splashLogo.cpp参照)。
+	ChangeScene<Splash>();
 	ChangeScene<result>();
 }
 
@@ -116,12 +122,49 @@ void Manager::Update()
 			// SetPaused(false)してからChangeSceneするが、念のための保険)。
 			m_Paused = false;
 
+			// STEP37: 切り替えた瞬間は画面が真っ黒(フェードアウト完了)の
+			// はずなので、ここからm_ChangeTotalTime秒かけて元に戻す
+			// (フェードイン)。合計時間はこの時点でスナップショットして
+			// おき、フェードイン中に別のChangeScene<T>()が呼ばれて
+			// m_ChangeTotalTimeが上書きされても影響を受けないようにする。
+			m_FadeInDuration = m_ChangeTotalTime;
+			m_FadeInTimer = m_ChangeTotalTime;
+
 			m_Scene = m_NextScene;
 			m_Scene->Init();
 
 			m_NextScene = nullptr;
 		}
 	}
+	else if (m_FadeInTimer > 0.0f)
+	{
+		m_FadeInTimer -= dt;
+		if (m_FadeInTimer < 0.0f) m_FadeInTimer = 0.0f;
+	}
+}
+
+float Manager::GetFadeAlpha()
+{
+	// フェードアウト中(次のシーンへ切り替わる前): 0(素通し)→1(真っ黒)
+	if (m_NextScene != nullptr)
+	{
+		if (m_ChangeTotalTime <= 0.0001f) return 0.0f; // Time=0指定は「フェード無しの瞬時切り替え」のまま
+		float t = 1.0f - (m_ChangeTime / m_ChangeTotalTime);
+		if (t < 0.0f) t = 0.0f;
+		if (t > 1.0f) t = 1.0f;
+		return t;
+	}
+
+	// フェードイン中(切り替わった直後): 1(真っ黒)→0(素通し)
+	if (m_FadeInTimer > 0.0f && m_FadeInDuration > 0.0001f)
+	{
+		float t = m_FadeInTimer / m_FadeInDuration;
+		if (t < 0.0f) t = 0.0f;
+		if (t > 1.0f) t = 1.0f;
+		return t;
+	}
+
+	return 0.0f;
 }
 
 void Manager::Draw()
@@ -151,6 +194,18 @@ void Manager::Draw()
 
 	for (int layer = 0; layer <= 10; layer++)
 	{
+		if (layer == 10)
+		{
+			// STEP48: layer 10 is Hud/TitleMenu/PauseMenu/SettingsScreen/etc --
+			// all Direct2D, drawn straight onto the real backbuffer, always at
+			// native window resolution. Everything below (layers 0-9: the 3D
+			// scene + Polygon2D) has been drawing into the offscreen scene
+			// target at the internal render resolution instead; stretch it
+			// onto the real backbuffer now, right before layer 10 starts, so
+			// the UI/text drawn after this is never softened by the upscale.
+			Renderer::BlitSceneToBackBuffer();
+		}
+
 		for (GameObject* gameObject : g_GameObject)
 		{
 			if (gameObject->GetLayer() == layer &&

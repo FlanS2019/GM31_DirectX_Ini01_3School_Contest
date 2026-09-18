@@ -6,16 +6,30 @@
 #include "Input.h"
 #include "hud.h"
 #include "player.h"
-#include "horror.h" 
-#include "pauseMenu.h" 
-#include "settingsScreen.h" 
-#include <cstdio>
+#include "horror.h" // STEP15: DrawScreenEffects() -- see the note above Hud::Begin() below
+#include "pauseMenu.h" // STEP24
+#include "settingsScreen.h" // STEP24
 #include <cstring>
 
 namespace
 {
+	// SPEC doesn't give a distance; matches Door's original hand-tuned range.
 	const float kMaxInteractDistance = 4.0f;
 
+	// STEP14: hotbar redesign -- was a fixed checklist of just the 3 supply
+	// items, always shown with [x]/[ ] checkboxes even before pickup. Per
+	// spec ("ホットバーてきなインタラクトが欲しい...使ったら消えるように
+	// したい") a slot used to only exist while Player::HasKey(id) was true.
+	//
+	// STEP20: "取得した時の枠は常に表示しておいてほしい" -- the slot itself
+	// (background frame) is now always drawn for every id below, at a fixed
+	// position, so the row doesn't jump around as items are gained/spent.
+	// Only the ICON inside is conditional on HasKey() now -- see the loop in
+	// Draw() -- so an empty slot still shows its frame with nothing in it,
+	// and Door::Interact()/ItemBox::Interact() calling Player::RemoveKey(id)
+	// still clears just the icon, not the frame. Covers every id Player's
+	// key-mask is used for -- see Map.cpp's SetKeyId()/SetItemId()/
+	// SetFinalKeyId() call sites.
 	struct InventoryEntry { int KeyId; const char* Name; };
 	const InventoryEntry kInventoryItems[] =
 	{
@@ -27,6 +41,10 @@ namespace
 	};
 	const int kInventoryItemCount = 5;
 
+	// Standard slab (ray-vs-AABB) test. box given as world-space min/max
+	// corners -- the same "GetPosition()=center, GetScale()=half-extent"
+	// convention Box/Door/Map.cpp/Player.cpp's collision already use, so
+	// this works unchanged for every Interactable in the game.
 	bool RayIntersectsAABB(const Vector3& origin, const Vector3& dir,
 		const Vector3& boxMin, const Vector3& boxMax, float maxDist, float& outDist)
 	{
@@ -85,6 +103,11 @@ namespace
 		return true;
 	}
 
+	// STEP16: "マイクラのホットバーみたいに" request -- each held id gets a
+	// square slot with a small vector icon instead of a text label. There's
+	// no image/texture loading pipeline in this engine to draw a real
+	// thumbnail with, so this is a flat procedural icon per item id built
+	// out of Hud's new DrawFilledRect/Ellipse/Polygon primitives (hud.h).
 	void DrawItemIcon(int keyId, float cx, float cy, float size)
 	{
 		switch (keyId)
@@ -205,13 +228,6 @@ void Interact::ApplyTarget(Interactable* newTarget)
 {
 	if (newTarget == m_Target) return;
 
-	char buf[128];
-	if (newTarget)
-		sprintf_s(buf, "[Interact] target: %s\n", newTarget->GetInteractText());
-	else
-		sprintf_s(buf, "[Interact] target: (none)\n");
-	OutputDebugStringA(buf);
-
 	m_Target = newTarget;
 }
 
@@ -232,6 +248,11 @@ void Interact::Update()
 
 	ApplyTarget(FindTarget());
 
+	// STEP37: 「クリックしても反応しない」対策 -- Eキーに加えて左クリックでも
+	// 調べる/開ける操作ができるようにする。IsMouseCaptureEnabled()で
+	// ゲームプレイ中(視点操作でカーソルが中央固定されている間)だけに絞る --
+	// カーソルが自由なとき(一時停止/設定画面が別に開いている等)にまで
+	// クリックが誤爆しないようにするため。
 	bool clickInteract = Input::IsMouseCaptureEnabled() && Input::GetMouseLeftTrigger();
 
 	if (m_Target && (Input::GetKeyTrigger('E') || clickInteract))
@@ -270,23 +291,50 @@ void Interact::Draw()
 
 	bool hasWarning = s_WarningTimer > 0.0f;
 
+	// STEP14: Hud::Begin()/End() still always run every frame (unchanged
+	// from STEP12) so the hotbar row below can appear/disappear on its own
+	// the moment the player picks something up or spends it, with no
+	// separate "does anything need to be drawn" check up here.
 
-	const float kSlotSize = 96.0f; 
-	const float kSlotY = SCREEN_HEIGHT - kSlotSize - 30.0f;
-	const float kWarningY = kSlotY - 45.0f;
+	// STEP20: "テキストと枠組みが重なっている" -- the hotbar slot row is now
+	// always on screen (see the STEP20 note further down), so the warning
+	// text needs a fixed position that always clears it, not a magic number
+	// that happened to work back when the row only showed up sometimes.
+	// Both this and the hotbar block below now read from the same two
+	// constants so they can't drift out of sync with each other again.
+	const float kSlotSize = 96.0f; // STEP34: 1.5x
+	const float kSlotY = SCREEN_HEIGHT - kSlotSize - 30.0f; // STEP34: 1.5x
+	const float kWarningY = kSlotY - 45.0f; // STEP34: 1.5x // clearly above the slot row, not overlapping it
 
 	Hud::Begin();
 
+	// STEP15: vignette + jump-scare flash first, so they sit underneath the
+	// hotbar/prompt/warning text drawn below instead of covering it. Direct2D
+	// only allows one BeginDraw()/EndDraw() pair per frame, so this can't be
+	// Horror's own Draw() (Manager would call it outside this Begin()/End()
+	// bracket) -- it's a plain method Horror exposes for exactly this call.
 	{
 		Horror* horror = Manager::GetGameObject<Horror>();
 		if (horror) horror->DrawScreenEffects();
 	}
 
 	{
+		// STEP16: "マイクラのホットバーみたいに" request -- square slots with
+		// icons (DrawItemIcon() above) instead of text badges.
+		//
+		// STEP20: "取得した時の枠は常に表示しておいてほしい" -- was: only draw a
+		// slot at all for ids HasKey() was true for, so the row would shrink/
+		// grow and slots would shuffle position as items were gained or spent.
+		// Now every id in kInventoryItems always gets a slot at a fixed
+		// position; only the icon inside is conditional on HasKey(), so an
+		// empty slot just shows its frame with nothing drawn in it yet.
+		// kSlotSize/kSlotY are declared up above (before Hud::Begin()) now --
+		// see the comment there -- so the warning text below can line up
+		// against the same slot row instead of guessing its own position.
 		Player* player = Manager::GetGameObject<Player>();
 		if (player)
 		{
-			const float slotGap = 12.0f;
+			const float slotGap = 12.0f; // STEP34: 1.5x
 			const float totalWidth = kSlotSize * kInventoryItemCount + slotGap * (kInventoryItemCount - 1);
 			const float startX = (SCREEN_WIDTH - totalWidth) * 0.5f;
 
@@ -302,14 +350,18 @@ void Interact::Draw()
 
 	if (hasPrompt)
 	{
-		Hud::DrawText(GetPromptText(), promptX, promptY, 33.0f, true);
+		Hud::DrawText(GetPromptText(), promptX, promptY, 33.0f, true); // STEP34: 1.5x
 	}
 
 	if (hasWarning)
 	{
-		Hud::DrawText(s_WarningText, SCREEN_WIDTH * 0.5f, kWarningY, 36.0f, true); 
+		Hud::DrawText(s_WarningText, SCREEN_WIDTH * 0.5f, kWarningY, 36.0f, true); // STEP34: 1.5x
 	}
 
+	// STEP24: 一時停止/設定画面は常に一番上に描く(モーダルなオーバーレイ
+	// なので、ホットバーや警告テキストより後、Hud::End()の直前)。
+	// PauseMenu::DrawUI()は設定画面が開いている間は自分から何も描かない
+	// (pauseMenu.cpp参照)ので、両方呼んでも二重には描画されない。
 	{
 		PauseMenu* pauseMenu = Manager::GetGameObject<PauseMenu>();
 		if (pauseMenu) pauseMenu->DrawUI();
@@ -318,6 +370,8 @@ void Interact::Draw()
 		if (settings) settings->DrawUI();
 	}
 
+	// STEP37: シーン遷移の黒フェード。PauseMenu/SettingsScreenより後、
+	// Hud::End()の直前 -- 遷移中は本当に最前面が真っ黒になってほしいので。
 	Hud::DrawFullScreenTint(0.0f, 0.0f, 0.0f, Manager::GetFadeAlpha());
 
 	Hud::End();
