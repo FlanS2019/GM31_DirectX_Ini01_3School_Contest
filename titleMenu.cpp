@@ -6,17 +6,19 @@
 #include "hud.h"
 #include "Game.h"
 #include "howToPlay.h"
+#include "stageSelect.h"
 #include "menuSound.h" 
 #include <cstdio>
 
 namespace
 {
-	const int kRootItemCount = 4; // ゲームスタート / 操作説明 / 設定 / ゲーム終了
+	const int kRootItemCount = 5; // ゲームスタート / ステージ選択 / 操作説明 / 設定 / ゲーム終了
 	const int kConfirmItemCount = 2; // いいえ / はい(誤操作防止のためデフォルトは「いいえ」側)
 
 	const char* kRootLabels[kRootItemCount] =
 	{
 		"ゲームスタート",
+		"ステージ選択",
 		"操作説明",
 		"設定",
 		"ゲーム終了",
@@ -89,7 +91,7 @@ void TitleMenu::Update()
 	if (m_State == State::ConfirmQuit && Input::GetKeyTrigger(VK_ESCAPE))
 	{
 		m_State = State::Root;
-		m_Selected = 3; // 「ゲーム終了」に戻す
+		m_Selected = 4; // 「ゲーム終了」に戻す -- index shifted by the new「ステージ選択」row
 		return;
 	}
 
@@ -104,13 +106,16 @@ void TitleMenu::Update()
 			case 0: // ゲームスタート
 				Manager::ChangeScene<Game>();
 				break;
-			case 1: // 操作説明
+			case 1: // ステージ選択
+				Manager::ChangeScene<StageSelect>();
+				break;
+			case 2: // 操作説明
 				Manager::ChangeScene<HowToPlay>();
 				break;
-			case 2: // 設定
+			case 3: // 設定
 				if (settings) settings->Open();
 				break;
-			case 3: // ゲーム終了
+			case 4: // ゲーム終了
 				m_State = State::ConfirmQuit;
 				m_Selected = 0; // 「いいえ」をデフォルト選択
 				break;
@@ -125,7 +130,7 @@ void TitleMenu::Update()
 			else
 			{
 				m_State = State::Root;
-				m_Selected = 3;
+				m_Selected = 4; // index shifted by the new「ステージ選択」row
 			}
 		}
 	}

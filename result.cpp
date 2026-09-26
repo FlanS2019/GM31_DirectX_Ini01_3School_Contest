@@ -10,10 +10,16 @@
 #include "Game.h"
 #include "resultMenu.h"
 #include "menuSound.h"
+#include "gameSettings.h" // STEP(stage-select): SetStageCleared() below
 void result::Init()
 {
 	//村松、単語間違えるなよ。背景くれたのはありがとう。
 	MenuBackgroundScene::Init();
+
+	// STEP(stage-select): reaching this screen means the player opened the
+	// 'E' finale door -- stage 0 (廃墟) counts as cleared from here on, which
+	// is what unlocks stage 1 (地下) on the new Stage Select screen.
+	GameSettings::SetStageCleared(0);
 
 	Manager::AddGameObject<ResultMenu>();
 	Manager::AddGameObject<MenuSound>(); 

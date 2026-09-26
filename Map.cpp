@@ -2,7 +2,6 @@
 #include "Map.h"
 #include "manager.h"
 #include "box.h"
-#include "door.h"
 #include "key.h"
 #include "switch.h"
 #include "item.h"
@@ -17,6 +16,7 @@
 #include "debris.h"
 #include "stainDirt.h"
 #include "stainBlood.h"
+#include "door.h"
 #include <cmath>
 #include <vector>
 
@@ -32,7 +32,7 @@ namespace
 
 	const char* g_Grid[ROWS] =
 	{
-		"#####U######",
+		"############",
 		"#AAA#..#CRC#",
 		"#AKA...DCCC#",
 		"#XAA#..#CCC#",
@@ -56,7 +56,7 @@ namespace
 	{
 		if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return true;
 		char c = g_Grid[row][col];
-		return c == '#' || c == 'D' || c == 'G' || c == 'E' || c == 'U'; // STEP01(stage2): underground entrance door
+		return c == '#' || c == 'D' || c == 'G' || c == 'E';
 	}
 
 	// True only for a plain open floor cell ('.') -- used to decide where
@@ -842,19 +842,6 @@ void Map::Init()
 				Door* door = SpawnDoorway(row, col, false);
 				door->SetRequiredKey(4); // final key, from the 'F' box above
 				door->SetIsExit(true);   // finishing its open animation triggers CLEAR -- see door.cpp
-				break;
-			}
-			case 'U': // STEP01(stage2): the underground entrance, at the north boundary wall
-			{
-				Door* door = SpawnDoorway(row, col, false);
-				// STEP01-fix(stage2): gated behind stage-1 clear -- key 4 is the
-				// same master key the 'F' ItemBox grants after all 3 supply items
-				// are collected, and the same key the 'E' finale door needs. So
-				// "cleared stage 1" == "already has key 4", reusing Door's
-				// existing required-key/CanInteract()/warning-text machinery
-				// instead of a brand new flag.
-				door->SetRequiredKey(4);
-				door->SetLeadsToUnderground(true); // finishing its open animation sends the player to Underground -- see door.cpp
 				break;
 			}
 			default:

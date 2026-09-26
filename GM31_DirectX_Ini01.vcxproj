@@ -169,6 +169,8 @@
     <ClCompile Include="titleBgm.cpp" />
     <ClCompile Include="titleLogo.cpp" />
     <ClCompile Include="titleMenu.cpp" />
+    <ClCompile Include="stageSelect.cpp" />
+    <ClCompile Include="stageSelectMenu.cpp" />
     <ClCompile Include="underground.cpp" />
     <ClCompile Include="undergroundLoadingScreen.cpp" />
     <ClCompile Include="undergroundMap.cpp" />
@@ -231,6 +233,8 @@
     <ClInclude Include="titleBgm.h" />
     <ClInclude Include="titleLogo.h" />
     <ClInclude Include="titleMenu.h" />
+    <ClInclude Include="stageSelect.h" />
+    <ClInclude Include="stageSelectMenu.h" />
     <ClInclude Include="underground.h" />
     <ClInclude Include="undergroundLoadingScreen.h" />
     <ClInclude Include="undergroundMap.h" />

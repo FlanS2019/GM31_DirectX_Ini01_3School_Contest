@@ -56,4 +56,11 @@ public:
 	// never touched. Default 3 = native 1080p (no upscaling at all).
 	static int GetResolutionIndex();
 	static void SetResolutionIndex(int index);
+
+	// STEP(stage-select): which stages have been cleared, persisted the same
+	// way as everything else above. stageIndex matches stageSelectMenu.cpp's
+	// kStages[] array (0 = îpö–, 1 = ínâ∫, ...). Not touched by
+	// ResetToDefault() -- that resets audio/video prefs, not save progress.
+	static bool IsStageCleared(int stageIndex);
+	static void SetStageCleared(int stageIndex);
 };

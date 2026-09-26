@@ -15,11 +15,6 @@ private:
 	bool m_IsExit = false;
 	bool m_ClearTriggered = false;
 
-	// STEP01(stage2): a second, independent "opening this finishes the
-	// door and changes scene" flag, parallel to m_IsExit -- see door.cpp's
-	// Update(). A given Door only ever has one of the two set.
-	bool m_LeadsToUnderground = false;
-
 	// STEP01-fix(stage2) DEBUG: how long R has been held while eligible for
 	// the debug key-grant (see door.cpp's Update()). Resets to 0 the moment
 	// the conditions stop holding.
@@ -56,5 +51,4 @@ public:
 	bool IsOpen() const { return m_OpenT >= 1.0f; }
 
 	void SetIsExit(bool isExit) { m_IsExit = isExit; }
-	void SetLeadsToUnderground(bool leadsToUnderground) { m_LeadsToUnderground = leadsToUnderground; }
 };

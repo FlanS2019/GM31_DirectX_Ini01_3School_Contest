@@ -4,7 +4,6 @@
 #include "manager.h"
 #include "Input.h"
 #include "result.h"
-#include "underground.h" // STEP01(stage2)
 #include "interact.h"
 #include "renderer.h"
 #include "modelRenderer.h"
@@ -16,8 +15,7 @@ namespace
 	const float kOpenSeconds = 1.0f;
 	const float kOpenAngleDeg = 100.0f;
 
-	// STEP01-fix(stage2)
-	const float kUndergroundFadeSeconds = 3.0f; // long enough to read as "walking down", not a jump-cut
+	// STEP01-fix(stage2) DEBUG
 	const float kDebugKeyGrantRadius = 4.0f;    // matches Interact's own kMaxInteractDistance
 	const float kDebugKeyGrantSeconds = 3.0f;
 
@@ -101,23 +99,12 @@ void Door::Update()
 		Manager::ChangeScene<result>(0.5f);
 	}
 
-	// STEP01(stage2): same "finish opening -> change scene, latched by
-	// m_ClearTriggered so it can't fire twice" shape as the m_IsExit block
-	// above, just going to Underground instead of result.
-	//
-	// STEP01-fix(stage2): the 0.5s cut read as an abrupt jump-cut, not
-	// "walking down stairs into the basement" -- stretched to
-	// kUndergroundFadeSeconds and paired with
-	// Underground::SetTransitionActive(true), which makes Interact::Draw()
-	// show a "descending the stairs..." line over the fade (see
-	// interact.cpp) so the pause reads as going somewhere, not just a
-	// longer loading screen.
-	if (m_LeadsToUnderground && !m_ClearTriggered && m_OpenT >= 1.0f)
-	{
-		m_ClearTriggered = true;
-		Underground::SetTransitionActive(true);
-		Manager::ChangeScene<Underground>(kUndergroundFadeSeconds);
-	}
+	// STEP01(stage2)->rolled back: the map no longer has an underground
+	// door -- entering Underground is moving to the Title's new Stage
+	// Select screen instead (in progress). Underground.h/cpp, the debug F4
+	// key in Underground::Update(), and interact.cpp's transition-message
+	// draw are all left in place; only the door-triggered path is removed
+	// here.
 
 	// STEP01-fix(stage2) DEBUG: stand within kDebugKeyGrantRadius of any
 	// locked door and hold R for kDebugKeyGrantSeconds to instantly get its

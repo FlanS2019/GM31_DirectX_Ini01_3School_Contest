@@ -22,6 +22,10 @@ namespace
 	int g_HorrorIntensity = 2; // 0=low, 1=mid, 2=high -- STEP27: 既定値を「強」に(大和さん指定: 「かなり怖くしておけ」)
 	int g_ResolutionIndex = 3; // 0=144p,1=360p,2=480p,3=1080p,4=4K -- default 3 = native 1080p
 
+	// STEP(stage-select): bit i set = stage i cleared. See gameSettings.h's
+	// IsStageCleared()/SetStageCleared() comment.
+	int g_StagesClearedMask = 0;
+
 	float Clamp01(float v) { return std::max(0.0f, std::min(1.0f, v)); }
 }
 
@@ -58,6 +62,7 @@ void GameSettings::Load()
 		else if (_stricmp(key, "InvertY") == 0) g_InvertY = (fValue != 0.0f);
 		else if (_stricmp(key, "HorrorIntensity") == 0) g_HorrorIntensity = std::max(0, std::min(2, (int)fValue));
 		else if (_stricmp(key, "Resolution") == 0) g_ResolutionIndex = std::max(0, std::min(4, (int)fValue));
+		else if (_stricmp(key, "StagesCleared") == 0) g_StagesClearedMask = (int)fValue;
 	}
 
 	fclose(file);
@@ -78,6 +83,7 @@ void GameSettings::Save()
 	fprintf(file, "InvertY=%d\n", g_InvertY ? 1 : 0);
 	fprintf(file, "HorrorIntensity=%d\n", g_HorrorIntensity);
 	fprintf(file, "Resolution=%d\n", g_ResolutionIndex);
+	fprintf(file, "StagesCleared=%d\n", g_StagesClearedMask);
 
 	fclose(file);
 }
@@ -205,4 +211,16 @@ void GameSettings::SetResolutionIndex(int index)
 {
 	g_ResolutionIndex = std::max(0, std::min(4, index));
 	Renderer::SetInternalResolution(g_ResolutionIndex);
+}
+
+bool GameSettings::IsStageCleared(int stageIndex)
+{
+	if (stageIndex < 0 || stageIndex >= 32) return false;
+	return (g_StagesClearedMask & (1 << stageIndex)) != 0;
+}
+
+void GameSettings::SetStageCleared(int stageIndex)
+{
+	if (stageIndex < 0 || stageIndex >= 32) return;
+	g_StagesClearedMask |= (1 << stageIndex);
 }
