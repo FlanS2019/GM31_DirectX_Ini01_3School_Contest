@@ -1,0 +1,16 @@
+# undergroundWall.mtl -- procedurally generated placeholder material.
+# Plain dark stone/earth color with a small emissive term (see
+# Stain_Dirt.mtl for why: unlitTexturePS.hlsl only shows ambient+light*Kd
+# when there's no texture, so a fully dark corner would otherwise render
+# pure black). Deliberately a flat solid color, not a texture -- avoids the
+# UV-tiling-on-merged-boxes problem that hit the floor (see
+# undergroundFloor.h's comment) since a solid fill can never look
+# stretched/seamed no matter how a wall segment gets merged.
+newmtl UndergroundStone
+Ka 1.000000 1.000000 1.000000
+Kd 0.155000 0.148000 0.140000
+Ks 0.040000 0.040000 0.040000
+Ke 0.012000 0.011000 0.010000
+Ns 6.000000
+d 1.000000
+illum 2

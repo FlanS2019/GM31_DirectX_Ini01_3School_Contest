@@ -1,0 +1,10 @@
+# overheadPipe.mtl -- procedurally generated placeholder material. Cold
+# silver-gray metal, matching the reference photo's ductwork/pipe runs.
+newmtl PipeMetal
+Ka 1.000000 1.000000 1.000000
+Kd 0.230000 0.235000 0.245000
+Ks 0.220000 0.220000 0.230000
+Ke 0.010000 0.010000 0.011000
+Ns 40.000000
+d 1.000000
+illum 2

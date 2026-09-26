@@ -1,0 +1,38 @@
+# generator.mtl -- procedurally generated placeholder materials.
+newmtl GeneratorBody
+Ka 1.000000 1.000000 1.000000
+Kd 0.130000 0.145000 0.120000
+Ks 0.090000 0.090000 0.090000
+Ke 0.006000 0.007000 0.006000
+Ns 20.000000
+d 1.000000
+illum 2
+
+newmtl GeneratorVent
+Ka 1.000000 1.000000 1.000000
+Kd 0.085000 0.085000 0.085000
+Ks 0.080000 0.080000 0.080000
+Ke 0.004000 0.004000 0.004000
+Ns 15.000000
+d 1.000000
+illum 2
+
+# small warm/emissive accent -- a single indicator light that still reads
+# in the dark, foreshadowing STEP08's power restoration.
+newmtl GeneratorPanel
+Ka 1.000000 1.000000 1.000000
+Kd 0.550000 0.400000 0.050000
+Ks 0.150000 0.120000 0.020000
+Ke 0.150000 0.080000 0.010000
+Ns 30.000000
+d 1.000000
+illum 2
+
+newmtl GeneratorPipe
+Ka 1.000000 1.000000 1.000000
+Kd 0.150000 0.090000 0.070000
+Ks 0.060000 0.060000 0.060000
+Ke 0.005000 0.003000 0.002000
+Ns 12.000000
+d 1.000000
+illum 2

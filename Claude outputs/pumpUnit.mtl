@@ -1,0 +1,38 @@
+# pumpUnit.mtl -- procedurally generated placeholder materials.
+newmtl PumpBase
+Ka 1.000000 1.000000 1.000000
+Kd 0.190000 0.190000 0.185000
+Ks 0.040000 0.040000 0.040000
+Ke 0.005000 0.005000 0.005000
+Ns 8.000000
+d 1.000000
+illum 2
+
+# teal-green motor housing, echoing the reference photo's pump units.
+newmtl PumpBody
+Ka 1.000000 1.000000 1.000000
+Kd 0.090000 0.320000 0.240000
+Ks 0.140000 0.160000 0.150000
+Ke 0.008000 0.020000 0.015000
+Ns 25.000000
+d 1.000000
+illum 2
+
+newmtl PumpPipe
+Ka 1.000000 1.000000 1.000000
+Kd 0.140000 0.140000 0.150000
+Ks 0.150000 0.150000 0.160000
+Ke 0.006000 0.006000 0.007000
+Ns 20.000000
+d 1.000000
+illum 2
+
+# small cream gauge face -- reads even in a dark room.
+newmtl GaugeFace
+Ka 1.000000 1.000000 1.000000
+Kd 0.550000 0.520000 0.420000
+Ks 0.100000 0.100000 0.100000
+Ke 0.060000 0.055000 0.040000
+Ns 15.000000
+d 1.000000
+illum 2

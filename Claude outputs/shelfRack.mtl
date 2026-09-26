@@ -1,0 +1,11 @@
+# shelfRack.mtl -- procedurally generated placeholder material. Cold
+# industrial gray-blue, deliberately different from the warm wood-brown
+# family (Crate/WoodenPallet/Stool) so it reads as a distinct kind of prop.
+newmtl ShelfMetal
+Ka 1.000000 1.000000 1.000000
+Kd 0.190000 0.200000 0.220000
+Ks 0.150000 0.150000 0.160000
+Ke 0.008000 0.008000 0.009000
+Ns 35.000000
+d 1.000000
+illum 2
